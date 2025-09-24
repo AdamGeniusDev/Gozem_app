@@ -1,0 +1,8 @@
+﻿*.zip
+*.rar
+*.7z
+*.exe
+*.msi
+*.crdownload
+*.iso
+node_modules/

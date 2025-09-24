@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+  .flex-between {
+    @apply flex items-center justify-between; 
+  }
+}
+
+@layer components {
+  .home_header {
+    @apply absolute top-0 w-full h-[70px] bg-white/80 flex-row items-center justify-between px-5 z-[100]; /* ✅ h-[70px], z-[100] */
+  }
+  .home_notif {
+    @apply absolute right-0 top-0 bg-red-600 rounded-full w-5 h-5;
+  }
+}
