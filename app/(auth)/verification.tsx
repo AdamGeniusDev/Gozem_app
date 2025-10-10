@@ -36,10 +36,6 @@ export default function Verification() {
   const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({ value, setValue });
 
-  const autoComplete = Platform.select<TextInputProps['autoComplete']>({
-    android: 'sms-otp',
-    default: 'one-time-code',
-  });
 
   const isCodeInvalid = !(value.length === CELL_COUNT);
 
@@ -110,7 +106,6 @@ const startTimer = useCallback(() => {
           rootStyle={styles.codeFieldRoot}
           keyboardType="number-pad"
           textContentType="oneTimeCode"   
-          autoComplete={autoComplete}
           autoFocus
           renderCell={({ index, symbol, isFocused }) => (
             <Text

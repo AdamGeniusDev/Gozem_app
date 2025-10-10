@@ -101,8 +101,8 @@ const Zem = () => {
         </View>
       </View>
       <Text className='text-neutral-500 text-[12px]'>{t('services.addresses.continueWithoutDropoff')}</Text>
-      <View className='mt-2 p-3  rounded-lg flex items-center justify-center bg-white' style={{height: 65, width:130,elevation: 3}}>
-        <Text className='font-medium text-[14px]'>{t('services.addresses.recentFromHere')}</Text>
+      <View className='mt-2 p-2  rounded-lg flex items-center justify-center bg-white' style={{height: 65, width:130,elevation: 3}}>
+        <Text className='font-medium text-[13px]'>{t('services.addresses.recentFromHere')}</Text>
       </View>
     </View>
   )

@@ -97,7 +97,17 @@ class AppwriteAuthManager {
         try {
             await account.get();
         } catch {
-            await account.createAnonymousSession();
+            // Si pas de session, vérifier si l'utilisateur existe dans Appwrite (synchronisé depuis Clerk)
+            if (userId) {
+                try {
+                    // Créer une session anonyme temporaire pour créer le JWT
+                    await account.createAnonymousSession();
+                } catch (e) {
+                    console.warn('Session anonyme déjà existante', e);
+                }
+            } else {
+                await account.createAnonymousSession();
+            }
         }
 
         const { jwt } = await account.createJWT();
@@ -199,11 +209,14 @@ export async function isProfileComplete(clerkUserId?: string | null, getToken?: 
     }
 }
 
+
 export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { clerkUserId?: string | null, email?: string | null }) => {
     return withRetry(async () => {
         await authManager.ensureAuth(getToken, clerkUserId || undefined);
 
         let doc: any | null = null;
+        
+        // Recherche par clerkUserId (prioritaire car synchronisé par le webhook)
         if (clerkUserId) {
             const res = await databases.listDocuments(
                 appwriteConfig.databaseId,
@@ -213,6 +226,7 @@ export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { c
             doc = res?.documents?.[0] ?? null;
         }
 
+        // Fallback: recherche par email si pas trouvé
         if (!doc && email) {
             const res = await databases.listDocuments(
                 appwriteConfig.databaseId,
@@ -223,7 +237,7 @@ export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { c
         }
 
         return {
-            exists: doc,
+            exists: Boolean(doc),
             complete: doc ? await isProfileComplete(clerkUserId, getToken) : false,
             doc,
         };
@@ -255,9 +269,16 @@ export const uploadImage = async (imageUri: string | null | undefined) => {
     });
 };
 
+
 export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn) => {
     return withRetry(async () => {
         await authManager.ensureAuth(getToken, params.clerkUserId);
+
+        // Vérifier si l'utilisateur existe déjà (synchronisé depuis Clerk)
+        const { exists, doc } = await findUser(getToken, { 
+            clerkUserId: params.clerkUserId, 
+            email: params.email 
+        });
 
         const avatarId = await uploadImage(params.avatar ?? null);
 
@@ -271,6 +292,23 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
             clerkUserId: params.clerkUserId,
         };
 
+        // Si l'utilisateur existe déjà (synchronisé par webhook), on met à jour
+        if (exists && doc) {
+            console.log('✓ Utilisateur trouvé, mise à jour du profil...');
+            
+            const updatedDoc = await databases.updateDocument(
+                appwriteConfig.databaseId,
+                appwriteConfig.userCollectionId,
+                doc.$id,
+                userData
+            );
+            
+            return updatedDoc.$id as string;
+        }
+
+        // Sinon on crée (fallback au cas où le webhook n'a pas encore synchronisé)
+        console.log('⚠ Utilisateur non trouvé, création du profil...');
+        
         const me = await account.get();
         const docPerms = [
             Permission.read(Role.user(me.$id)),
@@ -278,7 +316,7 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
             Permission.delete(Role.user(me.$id)),
         ];
 
-        const doc = await databases.createDocument(
+        const newDoc = await databases.createDocument(
             appwriteConfig.databaseId,
             appwriteConfig.userCollectionId,
             ID.unique(),
@@ -286,7 +324,7 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
             docPerms
         );
 
-        return doc.$id as string;
+        return newDoc.$id as string;
     }, 2, getToken, params.clerkUserId);
 };
 
@@ -378,6 +416,7 @@ export const updateUserImage = async(getToken: GetTokenFn, clerkUserId?: string 
     }, 2, getToken, clerkUserId || undefined);
 };
 
+
 export async function deleteUserAccount(
   getToken: () => Promise<string | null>,
   clerkUserId?: string | null
@@ -396,30 +435,65 @@ export async function deleteUserAccount(
 
     if (res.documents.length === 0) {
       console.warn("⚠ Aucun document Appwrite trouvé pour cet utilisateur");
-    } else {
-      const userDoc = res.documents[0];
+      return true;
+    }
+    
+    const userDoc = res.documents[0];
 
-      if (userDoc.avatarId) {
-        try {
-          await storage.deleteFile(appwriteConfig.bucketId, userDoc.avatarId);
-          console.log("🗑️ Image supprimée avec succès");
-        } catch (e: any) {
-          console.warn("⚠ Erreur suppression image:", e?.message);
-        }
-      }
-
+    // Supprimer l'image si elle existe
+    if (userDoc.avatarId) {
       try {
-        await databases.deleteDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.userCollectionId,
-          userDoc.$id
-        );
-        console.log("🗑️ Document utilisateur supprimé d’Appwrite");
+        await storage.deleteFile(appwriteConfig.bucketId, userDoc.avatarId);
+        console.log("🗑️ Image supprimée avec succès");
       } catch (e: any) {
-        console.warn("⚠ Erreur suppression document:", e?.message);
+        console.warn("⚠ Erreur suppression image:", e?.message);
       }
+    }
+
+    // Supprimer le document utilisateur
+    try {
+      await databases.deleteDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.userCollectionId,
+        userDoc.$id
+      );
+      console.log("🗑️ Document utilisateur supprimé d'Appwrite");
+    } catch (e: any) {
+      console.warn("⚠ Erreur suppression document:", e?.message);
     }
 
     return true;
   });
+}
+
+/**
+ * NOUVELLE FONCTION: Attendre que le webhook Clerk synchronise l'utilisateur
+ * Utile juste après l'inscription pour s'assurer que l'utilisateur est bien créé
+ */
+export async function waitForUserSync(
+  getToken: GetTokenFn,
+  clerkUserId: string,
+  maxAttempts: number = 3,
+  delayMs: number = 1000
+): Promise<boolean> {
+  console.log('⏳ Attente de la synchronisation Clerk → Appwrite...');
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const { exists } = await findUser(getToken, { clerkUserId, email: null });
+      
+      if (exists) {
+        console.log('✅ Utilisateur synchronisé !');
+        return true;
+      }
+      
+      console.log(`⏳ Tentative ${i + 1}/${maxAttempts}...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    } catch (error) {
+      console.warn('⚠ Erreur lors de la vérification:', error);
+    }
+  }
+  
+  console.warn('⚠ Timeout: Utilisateur non synchronisé après', maxAttempts, 'tentatives');
+  return false;
 }

@@ -1,4 +1,4 @@
-import { createUsers } from '@/lib/appwrite'
+import { createUsers} from '@/lib/appwrite'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 import { create } from 'zustand'
@@ -99,6 +99,7 @@ const useAuthStore = create<Auth>()(
             
             if (emailVerified) {
             // on NE récupère PAS de session ici (normal)
+
             router.replace('/(auth)/password');
             return true;
             } else {

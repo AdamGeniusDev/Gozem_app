@@ -98,8 +98,8 @@ const Tricycle = () => {
         </View>
       </View>
       <Text className='text-neutral-500 text-[12px]'>Destination recentes depuis ce lieu</Text>
-      <View className='mt-2 p-3  rounded-lg flex items-center justify-center bg-white' style={{height: 65, width:130,elevation: 3}}>
-        <Text className='font-medium text-[14px]'>Continuer sans destination</Text>
+      <View className='mt-2 p-2  rounded-lg flex items-center justify-center bg-white' style={{height: 65, width:130,elevation: 3}}>
+        <Text className='font-medium text-[13px]'>Continuer sans destination</Text>
       </View>
     </View>
   )
