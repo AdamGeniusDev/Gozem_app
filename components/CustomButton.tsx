@@ -1,22 +1,29 @@
 import React from "react";
 import { Pressable, Text, PressableProps } from "react-native";
+import cn from 'clsx';
 
 interface CustomButtonProps extends PressableProps {
   titre: string;
   disabled?: boolean;
   bg?: string;
+  className?: string;
 }
 
-const CustomButton = ({ titre, disabled = false,bg='bg-primary-400',...props }: CustomButtonProps) => {
+const CustomButton = ({ titre, disabled = false, bg='bg-primary-400', className, ...props }: CustomButtonProps) => {
   return (
     <Pressable
-      className={`w-full mb-3 py-2 mx-5 rounded-full ${
-        disabled ? "bg-neutral-200" : `${bg}`
-      }`}
+      className={cn(
+        "w-full mb-3 py-2 rounded-full",
+        disabled ? "bg-neutral-200" : bg,
+        className
+      )}
       disabled={disabled} 
-      {...props} //comment on passe le reste des props
+      {...props}
     >
-      <Text className={`font-extra text-center text-[16px] ${disabled ? "text-neutral-400" : "text-white"}`}>
+      <Text className={cn(
+        "font-extra text-center text-[16px]",
+        disabled ? "text-neutral-400" : "text-white"
+      )}>
         {titre}
       </Text>
     </Pressable>

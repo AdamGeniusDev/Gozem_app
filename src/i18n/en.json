@@ -1,0 +1,217 @@
+{
+  "welcome": {
+    "enterMail": "Enter your email",
+    "enterMailSubtitle": "Enter your email to sign in or create a new account."
+  },
+  "signIn": {
+    "msg": "An error occurred",
+    "msg1": "Incorrect password.",
+    "msg2": "No account found for this email.",
+    "msg3": "Invalid email.",
+    "msg4": "Too many attempts. Please try again later.",
+    "msg5": "Account temporarily locked.",
+    "welcomeBack": "Welcome back",
+    "passText": "Enter your password to sign in and enjoy our services.",
+    "placeholderPassword": "Enter your password",
+    "forgotPassword": "Forgot password?",
+    "signInButton": "Sign in",
+    "incorrectIdentifier": "Incorrect identifier"
+
+  },
+  "sign": {
+    "enterMail": "Enter your email",
+    "enterMailSubtitle": "Enter your email to sign in or create a new account.",
+    "validation": "Next",
+    "newEmail": "New email",
+    "newEmailSubtitle": "Choose a verification method to continue",
+    "continueEmail": "Continue with email",
+    "Erreur": "Error:"
+  },
+  "verification": {
+    "title": "Email verification",
+    "subtitle": "Enter the code sent to your email to continue.",
+    "resend": "Resend code",
+    "resendIn": "Resend code ({{time}})",
+    "verifyNow": "Verify now",
+    "codeInvalid": "The code is incorrect."
+  },
+  "password": {
+    "title": "Set your password",
+    "subtitle": "Create a password. You will need it to sign in.",
+    "placeholder": "Enter your password",
+    "placeholderConfirm": "Confirm your password",
+    "mismatch": "Passwords do not match.",
+    "requirementsTitle": "Your password must include:",
+    "reqNumber": "at least one digit [0–9]",
+    "reqLower": "at least one lowercase letter [a–z]",
+    "reqUpper": "at least one uppercase letter [A–Z]",
+    "reqSpecial": "at least one special character such as ! @ # & ()",
+    "reqLength": "between {{min}} and {{max}} characters",
+    "next": "Next",
+    "errorGeneric": "An error occurred.",
+    "errorWithMessage": "An error occurred: {{message}}"
+  },
+  "forgotPassword": {
+    "title": "Reset password",
+    "emailPlaceholder": "Your email",
+    "codePlaceholder": "Code received by email",
+    "newPasswordPlaceholder": "New password",
+    "sendCode": "Send code",
+    "sendingCode": "Sending…",
+    "validate": "Confirm",
+    "validating": "Validating…",
+    "errorGeneric": "An error occurred.",
+    "errorMessage": "Error: {{message}}"
+  },
+  "info": {
+    "title": "Tell us a little more about you",
+    "subtitle": "Fill in the fields below so we can get to know you and create your profile.",
+    "placeholders": {
+      "name": "Enter your first name*",
+      "firstname": "Enter your last name*",
+      "gender": "Gender*",
+      "birthdate": "Date of birth*"
+    },
+    "avatar": {
+      "add": "Add a profile photo",
+      "label": "Profile photo"
+    },
+    "genderSheet": {
+      "title": "Select gender",
+      "male": "Male",
+      "female": "Female"
+    },
+    "dateSheet": {
+      "title": "Birthday",
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "button": {
+      "submit": "Complete your registration",
+      "loading": "Loading..."
+    },
+    "error": {
+      "generic": "An error occurred: {{message}}",
+      "title": "Error"
+    }
+  },
+  "home": {
+    "walletTitle": "Wallet",
+    "walletBalance": "{{amount}} {{currency}}",
+    "currency": "F",
+    "freeDeliveryTitle": "Free delivery 😋🤩",
+    "freeDeliverySubtitle": "At our new restaurants"
+  },
+  "account": {
+    "title": "Account",
+    "menu": {
+      "activityHistory": "My activity history",
+      "discountCodes": "Discount codes",
+      "myTickets": "My tickets",
+      "referral": "Referral",
+      "settings": "Account settings"
+    },
+    "links": {
+      "terms": "Terms and Conditions",
+      "communityCharter": "Gozem Community Charter"
+    }
+  },
+  "addresses": {
+    "title": "Addresses",
+    "tabs": {
+      "saved": "Saved",
+      "pending": "Pending requests"
+    },
+    "empty": {
+      "saved": "No saved addresses.",
+      "pending": "No pending requests."
+    },
+    "actions": {
+      "add": "Add an address"
+    }
+  },
+  "activity": {
+    "title": "Activities",
+    "support": "Support",
+    "tabs": {
+      "ongoing": "In progress",
+      "history": "History"
+    },
+    "content": {
+      "saved": "Saved",
+      "pending": "Pending request"
+    }
+  },
+  "services": {
+    "tabs": {
+      "byDistance": "By distance",
+      "byDuration": "By duration"
+    },
+    "headers": {
+      "definePickup": "Set pickup addresses"
+    },
+    "orderFor": {
+      "label": "Order for",
+      "me": "Myself",
+      "options": {
+        "gozemContact": "Gozem contact",
+        "phoneContact": "Phone contact",
+        "someoneElse": "Someone else"
+      }
+    },
+    "addresses": {
+      "pickupLabel": "Pickup address",
+      "pickupCurrent": "My current location",
+      "dropoffLabel": "Dropoff address",
+      "recentFromHere": "Recent destinations from here",
+      "continueWithoutDropoff": "Continue without a destination"
+    },
+    "duration": {
+      "label": "Ride duration"
+    },
+    "actions": {
+      "continue": "Continue"
+    }
+  },
+  "profile": {
+    "header": {
+      "savedOn": "Saved on {{date}}"
+    },
+    "fields": {
+      "lastname": "Last name",
+      "firstname": "First name",
+      "email": "Email",
+      "gender": "Gender",
+      "birthday": "Birthday"
+    },
+    "genders": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "modals": {
+      "editFirstnameTitle": "Last name",
+      "editNameTitle": "First name",
+      "genderTitle": "Select gender",
+      "birthdayTitle": "Birthday",
+      "validate": "Confirm",
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "actions": {
+      "saveChanges": "Save changes",
+      "saving": "Saving…"
+    },
+    "errors": {
+      "title": "Error",
+      "saveFailed": "Unable to save."
+    }
+  },
+  "layoutRoot":{
+    "home": "Home",
+     "help": "Help",
+     "addresses": "Addresses",
+     "activity": "Activity",
+     "account": "Account"
+
+  }
+}

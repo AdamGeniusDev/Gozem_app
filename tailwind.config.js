@@ -18,6 +18,10 @@ module.exports = {
           '200':"#EBEDEC",
         },
         succes: '#10B981',
+        terne: {
+          '25': '#FCFCFC',
+          '50': '#F9FAFB',
+        }
 
       },
       fontFamily:{
@@ -38,4 +42,7 @@ module.exports = {
     },
   },
   plugins: [],
+  corePlugins:{
+    preflight: false,
+  }
 };

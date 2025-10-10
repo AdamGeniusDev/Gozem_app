@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.adam.gozem",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +30,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-dev-client",  
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -53,9 +56,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "04b8abe4-2e8a-415d-8050-b0748b853650"
+        "projectId": "3f8e6327-82be-41fc-9f0f-6f78193a2bd3"
       }
     },
-    "owner": "adam_ridwane"
+    "owner": "adam20"
   }
 }

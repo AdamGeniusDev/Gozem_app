@@ -10,13 +10,16 @@ import CustomButton from '@/components/CustomButton'
 import {Asset, launchImageLibrary} from 'react-native-image-picker'
 import { useAuth, useClerk, useSignUp } from '@clerk/clerk-expo'
 import useAuthStore from '@/store/auth.store'
+import { useTranslation } from 'react-i18next'
 
 
 const Info = () => {
+
+    const {t} = useTranslation();
     
     const [form,setForm] = useState({name:'',firstname: ''});
     const {name,firstname} = form;
-    const GENRE = ['Homme','Femme'] as const;
+    const GENRE = ['male','female'] as const;
     type Genre=(typeof GENRE)[number] | '';
     const snapPoints = ['30%'];
     const genreRef=useRef<BottomSheetModal>(null);
@@ -35,7 +38,7 @@ const Info = () => {
         })
         if(result.didCancel) return;
         if(result.errorCode){
-            Alert.alert('Erreur',result.errorMessage ?? result.errorCode);
+            Alert.alert(t('info.error.title'),result.errorMessage ?? result.errorCode);
             return;
         }
         if(result.assets){
@@ -70,8 +73,8 @@ const Info = () => {
       className="flex-row items-center justify-between border-b border-neutral-200 px-5 py-3 h-[65]"
       hitSlop={10}
     >
-    <Image source={label === 'Homme'? images.homme: images.femme} className='h-[20] w-[20] absolute left-3' style={{tintColor: '#B0B3B2'}}/>
-      <Text className="text-[16px] font-regular px-6">{label}</Text>
+    <Image source={label === 'male' ? images.homme: images.femme} className='h-[20] w-[20] absolute left-3' style={{tintColor: '#B0B3B2'}}/>
+      <Text className="text-[16px] font-regular px-6">{label === 'male' ? t('info.genderSheet.male') : t('info.genderSheet.female')}</Text>
       <Image 
       source={!selected? images.cocher : images.checked} 
       className='h-[24] w-[24]' 
@@ -165,17 +168,17 @@ const Info = () => {
         behavior={Platform.OS === 'ios'? 'padding':'height'}
         >
             <View className="gap-y-3">
-                <Text className="font-poppins-bold text-[20px]">Dites-en nous un peu plus sur vous </Text>
-                 <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">Renseignez les champs suivants pour nous permettre de vous connaitre et creer votre profil      
+                <Text className="font-poppins-bold text-[20px]">{t('info.title')}</Text>
+                 <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">{t('info.subtitle')}   
                 </Text>
                 <CustomInput
-                placeholder='Entrez votre nom*'
+                placeholder={t('info.placeholders.name')}
                 image={images.identite} 
                 value={name}
                 onChangeText={(value)=>setForm({...form,name:value})}
                  />
                  <CustomInput
-                placeholder='Entrez votre nom de famille*'
+                placeholder={t('info.placeholders.firstname')}
                 image={images.identite} 
                 value={firstname}
                 onChangeText={(value)=>setForm({...form,firstname:value})}
@@ -184,17 +187,18 @@ const Info = () => {
                  <Pressable onPress={openGenre}>
                  <CustomInput
                  editable={false}
-                 placeholder='Genre*'
+                 placeholder={t('info.placeholders.gender')}
                  image={images.genre} 
                  icon={images.droite}
-                 value={genre}
+                 // display translated label while keeping genre key in state
+                 value={genre ? (genre === 'male' ? t('info.genderSheet.male') : t('info.genderSheet.female')) : ''}
                  />
                  </Pressable>
 
                  <Pressable onPress={openDate}>
                  <CustomInput
                  editable={false}
-                 placeholder='Date de naissance*'
+                 placeholder={t('info.placeholders.birthdate')}
                  image={images.genre} 
                  icon={images.droite}
                  value={afficherDate(validDate)}
@@ -208,19 +212,19 @@ const Info = () => {
                         borderRadius: 50,
                     }} />
                     <View className="flex flex-col gap-1.5 h-full justify-center">
-                        <Text className='font-medium text-neutral-400 text-[14px]'>Ajouter une photo de profile</Text>
-                        <Text className='font-poppins-bold text-primary-300 text-[14px]'>Photo de profile</Text>
+                        <Text className='font-medium text-neutral-400 text-[14px]'>{t('info.avatar.add')}</Text>
+                        <Text className='font-poppins-bold text-primary-300 text-[14px]'>{t('info.avatar.label')}</Text>
                     </View>
                     <Image source={images.droite} className='h-[12] w-[12] absolute right-3' style={{tintColor: '#B0B3B2'}}/>
                  </Pressable>
              
             </View>
-            {error? <Text className="text-red-600 text-[10px]">Une erreur s'est produite {error}</Text>: null}
+            {error? <Text className="text-red-600 text-[10px]">{t('info.error.generic')}{error}</Text>: null}
             {
                 isLoading? (
-            <CustomButton titre='Chargement...' disabled={true}/>
+            <CustomButton titre={t('info.button.loading')} disabled={true}/>
                 ):
-            <CustomButton  titre='Finaliser votre inscription' disabled={!validSubmit()} onPress={submit}/>
+            <CustomButton  titre={t('info.button.submit')} disabled={!validSubmit()} onPress={submit}/>
             }
 
             <BottomSheetModal
@@ -233,6 +237,7 @@ const Info = () => {
             enableHandlePanningGesture={false}
             handleIndicatorStyle={{backgroundColor: 'transparent'}}
             handleComponent={()=>(
+
                 <View>
                     <Pressable onPress={closeGenre} hitSlop={15}>
                         <Image source={images.close} className="w-[40] h-[40] absolute right-3 top-[-50]"/>
@@ -241,7 +246,7 @@ const Info = () => {
             )}
             >
                 <BottomSheetView className="py-5 gap-y-3">
-                    <Text className="font-poppins-bold text-[20px] px-5">Selectionner le sexe</Text>
+                    <Text className="font-poppins-bold text-[20px] px-5">{t('info.genderSheet.title')}</Text>
                         <FlatList
                         data={GENRE}
                         keyExtractor={(item)=>item}
@@ -274,6 +279,7 @@ const Info = () => {
             enableContentPanningGesture={false}
             handleIndicatorStyle={{backgroundColor: 'transparent'}}
              handleComponent={()=>(
+
                 <View>
                     <Pressable onPress={closeDate} hitSlop={15}>
                         <Image source={images.close} className="w-[40] h-[40] absolute right-3 top-[-50]"/>
@@ -282,7 +288,7 @@ const Info = () => {
             )}
             >
                 <BottomSheetView className="p-5">
-                    <Text className="font-poppins-bold text-[20px]">Date d'anniversaire</Text>
+                    <Text className="font-poppins-bold text-[20px]">{t('info.dateSheet.title')}</Text>
                     <DatePicker
                         date={tempDate}
                         onDateChange={setTempDate}
@@ -297,10 +303,10 @@ const Info = () => {
                          />
                          <View className="flex flex-row w-full justify-end items-end mt-5">
                             <Pressable onPress={closeDate}>
-                                <Text className='font-poppins-bold text-[15px] text-primary-400'>Annuler</Text>
+                                <Text className='font-poppins-bold text-[15px] text-primary-400'>{t('info.dateSheet.cancel')}</Text>
                             </Pressable>
                             <Pressable disabled={disabledDate(tempDate)} onPress={validateDate} >
-                                <Text className={`font-poppins-bold text-[15px] ${!disabledDate(tempDate)? 'text-primary-400': 'text-neutral-300'}  ml-5`}>D'accord</Text>
+                                <Text className={`font-poppins-bold text-[15px] ${!disabledDate(tempDate)? 'text-primary-400': 'text-neutral-300'}  ml-5`}>{t('info.dateSheet.ok')}</Text>
                             </Pressable>
                          </View>
                 </BottomSheetView>

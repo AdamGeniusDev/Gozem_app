@@ -8,6 +8,7 @@ import {  router } from 'expo-router'
 import Carousel, { ICarouselInstance, Pagination } from 'react-native-reanimated-carousel'
 import { welcomedata } from '@/constants'
 import { useSharedValue,configureReanimatedLogger, ReanimatedLogLevel  } from 'react-native-reanimated'
+import { useTranslation } from 'react-i18next'
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn, // garde les warns/erreurs utiles
@@ -15,6 +16,8 @@ configureReanimatedLogger({
 });
 
 const Welcome = () => {
+const {t} = useTranslation();
+
   const region = (getLocales()[0]?.regionCode || 'BJ') as ICountry['cca2'];
   const [phone,setPhone] = useState('');
   const [country,setCountry]= useState<ICountry | undefined>(undefined);
@@ -83,8 +86,8 @@ const Welcome = () => {
           backgroundColor: '#EBEDEC'}}
         >
         <BottomSheetView className="gap-y-2 p-[15px]">
-          <Text className="font-poppins-bold text-[20px]">Entrez votre email</Text>
-          <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">Entrez votre email pour vous connecter ou pour créer un nouveau compte.</Text>
+          <Text className="font-poppins-bold text-[20px]">{t('welcome.enterMail')}</Text>
+          <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">{t('welcome.enterMailSubtitle')}</Text>
 
           <PhoneInput 
           value={phone}
@@ -92,7 +95,7 @@ const Welcome = () => {
           defaultCountry={region}
           selectedCountry={country}
           onChangeSelectedCountry={setCountry}
-          placeholder="Entrer votre email"
+          placeholder={t('welcome.enterMail')}
           onPress={()=> router.push('/(auth)/sign')}
           modalDisabled={true}
           showSoftInputOnFocus={false}

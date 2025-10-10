@@ -4,11 +4,13 @@ import CustomInput from '@/components/CustomInput';
 import { images } from '@/constants';
 import useAuthStore from '@/store/auth.store';
 import { router } from 'expo-router';
-import React, { useState, useCallback, useMemo } from 'react';
+import  { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Password = () => {
+  const {t} = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [seePassword, setSeePassword] = useState(false);
@@ -88,14 +90,14 @@ const Password = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
       >
         <View className="gap-y-2">
-          <Text className="font-poppins-bold text-[20px]">Définissez votre mot de passe</Text>
-          <Text className="mb-2">Créer un mot de passe. Vous aurez besoin de celui-ci pour vous connecter.</Text>
+          <Text className="font-poppins-bold text-[20px]">{t('password.title')}</Text>
+          <Text className="mb-2">{t('password.subtitle')}</Text>
 
           <CustomInput 
             value={password}
             onChangeText={setPassword}
             image={images.cadenas}
-            placeholder='Entrer votre mot de passe' 
+            placeholder={t('password.placeholder')}
             onPress={toggleSeePassword}
             secureTextEntry={!seePassword} 
             icon={seePassword ? images.visible : images.nvisible}
@@ -104,7 +106,7 @@ const Password = () => {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             image={images.cadenas}
-            placeholder='Confirmer votre mot de passe' 
+            placeholder={t('password.placeholderConfirm')}
             onPress={toggleSeeConfirmPassword}
             secureTextEntry={!seeConfirmPassword} 
             icon={seeConfirmPassword ? images.visible : images.nvisible}
@@ -117,18 +119,18 @@ const Password = () => {
           )}
 
           <View className="mt-5">
-            <Text className="font-semibold text-[14px] mb-3 text-neutral-600">Votre mot de passe doit contenir :</Text>
-            <CustomCheckbox checked={validPassword.hasNumber} label='au moins un chiffre [0-9]'/>
-            <CustomCheckbox checked={validPassword.hasLowerCase} label='au moins un caractère minuscule [a-z]' />
-            <CustomCheckbox checked={validPassword.hasUpperCase} label='au moins un caractère majuscule [A-Z]'/>
-            <CustomCheckbox checked={validPassword.hasSpecialChar} label='au moins un caractère spécial comme ! @ # & ()'/>
-            <CustomCheckbox checked={validPassword.hasValidLength} label='entre 8 et 20 caractères'/>
+            <Text className="font-semibold text-[14px] mb-3 text-neutral-600">{t('password.requirementsTitle')}</Text>
+            <CustomCheckbox checked={validPassword.hasNumber} label={t('password.reqNumber')}/>
+            <CustomCheckbox checked={validPassword.hasLowerCase} label={t('password.reqLower')} />
+            <CustomCheckbox checked={validPassword.hasUpperCase} label={t('password.reqUpper')}/>
+            <CustomCheckbox checked={validPassword.hasSpecialChar} label={t('password.reqSpecial')}/>
+            <CustomCheckbox checked={validPassword.hasValidLength} label={t('password.reqLength')}/>
           </View>
         </View>
 
         {error ? (
           <Text className='text-red-600 text-[10px]'>
-            Une erreur est survenue: {String(error)}
+            {t('password.errorGeneric')} {String(error)}
           </Text>
         ) : null}
 
@@ -137,7 +139,7 @@ const Password = () => {
             <ActivityIndicator color='#ffffff'/>
           </Pressable>
         ) : (
-          <CustomButton titre='Suivant' disabled={!isFormValid} onPress={submit}/>
+          <CustomButton titre={t('password.next')} disabled={!isFormValid} onPress={submit}/>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>

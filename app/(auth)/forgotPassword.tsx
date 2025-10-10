@@ -9,8 +9,10 @@ import CustomInput from '@/components/CustomInput';
 import CustomButton from '@/components/CustomButton';
 import { images } from '@/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export default function ForgotPassword() {
+  const {t} = useTranslation();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { userId, getToken } = useAuth();
   const { email: storeEmail } = useAuthStore();
@@ -70,19 +72,19 @@ export default function ForgotPassword() {
                       </Pressable>
         </View>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} className='flex-1 items-center gap-y-3 px-5 py-6 bg-white'>
-      <Text className='font-poppins-bold text-[20px] mb-2'>Réinitialiser le mot de passe</Text>
+      <Text className='font-poppins-bold text-[20px] mb-2'>{t('forgotPassword.title')}</Text>
       {error ? <Text className='text-red-500 mb-2'>{error}</Text> : null}
 
       {!sent ? (
         <>
-          <CustomInput image={images.email} placeholder="Votre email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-          <CustomButton titre={submitting ? 'Envoi…' : 'Envoyer le code'} onPress={sendCode} disabled={submitting || !email} />
+          <CustomInput image={images.email} placeholder={t('forgotPassword.emailPlaceholder')} value={email} onChangeText={setEmail} keyboardType="email-address" />
+          <CustomButton titre={submitting ? t('forgotPassword.sendingCode') : t('forgotPassword.sendCode')} onPress={sendCode} disabled={submitting || !email} />
         </>
       ) : (
         <>
-          <CustomInput image={images.sms} placeholder="Code reçu par email" value={code} onChangeText={setCode} />
-          <CustomInput image={images.cadenas}placeholder="Nouveau mot de passe" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-          <CustomButton titre={submitting ? 'Validation…' : 'Valider'} onPress={resetPassword} disabled={submitting || !code || !newPassword} />
+          <CustomInput image={images.sms} placeholder={t('forgotPassword.codePlaceholder')} value={code} onChangeText={setCode} />
+          <CustomInput image={images.cadenas}placeholder={t('forgotPassword.newPasswordPlaceholder')}value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+          <CustomButton titre={submitting ? t('forgotPassword.validating') : t('forgotPassword.validate')} onPress={resetPassword} disabled={submitting || !code || !newPassword} />
         </>
       )}
     </KeyboardAvoidingView>

@@ -1,9 +1,9 @@
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import './global.css';
 import 'react-native-reanimated';
 import { SplashScreen, Stack } from "expo-router";
 import {useFonts} from 'expo-font';
 import { useCallback, useEffect } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import {ClerkProvider} from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
@@ -12,6 +12,7 @@ import LottieView from 'lottie-react-native';
 import { loaders } from '@/constants';
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import '../src/i18n/index';
 
 Sentry.init({
   dsn: 'https://2ed88e3bf6e402259453c5e5c0330312@o4509044325744640.ingest.de.sentry.io/4509982614814800',
@@ -84,7 +85,7 @@ export default Sentry.wrap(function RootLayout() {
   return (
     //bottomSheetModalProvider ici c'est dans le cas ou je voudrais utiliser un bottom sheet modal
     <ClerkProvider tokenCache={tokenCache}>
-      <GestureHandlerRootView>
+      <GestureHandlerRootView style={{flex: 1}}>
         <SafeAreaProvider>
           <BottomSheetModalProvider>
             <Stack screenOptions={{headerShown: false}} />

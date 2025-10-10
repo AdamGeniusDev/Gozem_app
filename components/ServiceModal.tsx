@@ -1,5 +1,5 @@
 import { View, Text, ImageSourcePropType, Image, Pressable } from 'react-native'
-import React, { useCallback, useRef } from 'react'
+import  { useCallback, useRef } from 'react'
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet'
 import { images } from '@/constants'
 import { Href,router } from 'expo-router'

@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import  { useEffect} from 'react';
 import { Redirect, Tabs ,router} from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { isProfileComplete } from '@/lib/appwrite';
 import { Image, ImageSourcePropType, Text, View, Pressable } from 'react-native';
 import { images } from '@/constants';
+import { useTranslation } from 'react-i18next';
 
 interface TabBarIconProps {
   icon: ImageSourcePropType;
@@ -12,6 +13,8 @@ interface TabBarIconProps {
 }
 
 export default function TabLayout() {
+
+  const {t} = useTranslation();
   const { isSignedIn, getToken, userId } = useAuth();
 
   useEffect(() => {
@@ -72,23 +75,29 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Accueil', tabBarIcon: ({ focused }) => <TabBarIcon title="Accueil" icon={images.acceuil} focused={focused} /> }}
+        options={{ title: t("layoutRoot.home"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.home")} icon={images.acceuil} focused={focused} /> }}
       />
       <Tabs.Screen
-        name="aide"
-        options={{ title: 'Aide', tabBarIcon: ({ focused }) => <TabBarIcon title="Aide" icon={images.aide} focused={focused} /> }}
+        name="aide-redirect"
+        options={{ title: t("layoutRoot.help"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.help")} icon={images.aide} focused={focused} /> }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/(services)/aide');
+          }
+        }}
       />
       <Tabs.Screen
         name="adresses"
-        options={{ title: 'Adresses', tabBarIcon: ({ focused }) => <TabBarIcon title="Adresses" icon={images.adresse} focused={focused} /> }}
+        options={{ title: t("layoutRoot.addresses"), tabBarIcon: ({ focused }) => <TabBarIcon title="Adresses" icon={images.adresse} focused={focused} /> }}
       />
       <Tabs.Screen
         name="activity"
-        options={{ title: 'Activité', tabBarIcon: ({ focused }) => <TabBarIcon title="Activité" icon={images.activity} focused={focused} /> }}
+        options={{ title: t("layoutRoot.activity"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.addresses")} icon={images.activity} focused={focused} /> }}
       />
       <Tabs.Screen
         name="compte"
-        options={{ title: 'Compte', tabBarIcon: ({ focused }) => <TabBarIcon title="Compte" icon={images.compte} focused={focused} /> }}
+        options={{ title: t("layoutRoot.account"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.account")} icon={images.compte} focused={focused} /> }}
       />
     </Tabs>
   );

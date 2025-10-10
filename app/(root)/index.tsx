@@ -1,43 +1,35 @@
 import {FlatList, Image, Pressable, Text, View } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect} from "react";
 import { footer, images, onboarding, services } from "@/constants";
-import { getImage } from "@/lib/appwrite";
 import { useAuth } from "@clerk/clerk-expo";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ServiceModal from "@/components/ServiceModal";
 import Animated, { SlideInRight, SlideOutLeft } from "react-native-reanimated";
 import ServiceCard from "@/components/ServiceCard";
 import useLocationStore from "@/store/location.store";
+import { useUserStore } from "@/store/user.store";
+import { useTranslation } from "react-i18next";
+import { Redirect } from "expo-router";
 
 export default function Index() {
-  const { isLoaded,getToken, userId } = useAuth();
-  const [avatar, setAvatar] = useState<{ uri: string } | null>(null);
+  const {t}= useTranslation();
+  const { isLoaded,getToken, userId, isSignedIn } = useAuth();
+  const avatar = useUserStore(state => state.avatar);
+  const loadUser = useUserStore(state => state.loadUser);
   const {getAll} = useLocationStore();
+
   const number = 0;
 
-  useEffect(() => {
-    if(!isLoaded || !userId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const src = await getImage(getToken, userId);
-        if (!cancelled) setAvatar(src);
-        if(src?.uri){
-          Image.prefetch(src.uri).catch(()=>{})
-        }
-       
-      } catch (e:any) {
-        if (!cancelled) setAvatar(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, isLoaded]); 
+   useEffect(() => {
+    if (!isLoaded || !userId) return;
+    loadUser(getToken, userId);
+  }, [userId, isLoaded]);
 
  useEffect(()=>{
   getAll();  
- },[getAll])
+ },[getAll]);
+
+ if(!isSignedIn) return <Redirect href='/' />
 
  
 
@@ -52,7 +44,7 @@ export default function Index() {
 
     <View className='w-full h-full'>
       <View className='home_header' style={{zIndex:100}}>
-        <Image source={avatar ? avatar :images.utilisateur} className='w-12 h-12 rounded-full' resizeMode="cover" resizeMethod="resize"/>
+        <Image source={avatar ? avatar :images.utilisateur} className='w-12 h-12 rounded-full' resizeMode="cover" resizeMethod="resize" fadeDuration={0}/>
       <View className='flex items-center justify-center' style={{width: 125,height:50}}>
         <Image source={images.gozem} className='w-full h-full' resizeMode="contain" />
       </View>
@@ -90,7 +82,7 @@ export default function Index() {
               <View>
                 <View className='flex-row gap-2 items-center'>
                   <Image source={images.portefeuille} className='w-[15px] h-[15px]' resizeMode='contain' tintColor={'#FFFFFF'}/>
-                  <Text className='text-white font-regular text-[12px]'>Portefeuille</Text>
+                  <Text className='text-white font-regular text-[12px]'>{t('home.walletTitle')}</Text>
                 </View>
                 <Text className='font-poppins-bold text-[22px] text-white'>0<Text className='ml-3 text-[18px]'>F</Text></Text>
               </View>
@@ -114,8 +106,8 @@ export default function Index() {
               <Text 
               numberOfLines={1}
               ellipsizeMode="tail"
-              className='font-poppins-bold text-white text-[20px]'>Livraison gratuite 😋🤩</Text>
-              <Text className='font-regular text-white text-[14px]'>Chez nos Nouveaux Restos</Text>
+              className='font-poppins-bold text-white text-[20px]'>{t('home.freeDeliveryTitle')}</Text>
+              <Text className='font-regular text-white text-[14px]'>{t('home.freeDeliverySubtitle')}</Text>
 
               <FlatList
               data={footer}

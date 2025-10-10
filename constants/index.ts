@@ -51,6 +51,24 @@ import pizza from '../assets/images/pizza.jpg';
 import riz from '../assets/images/riz.jpg';
 import attieke from '../assets/images/attieke.jpg';
 import etoile from '../assets/images/etoile.png';
+import expand from '../assets/images/expand.png';
+import fil from '../assets/images/fil.png';
+import depart from '../assets/images/depart.png';
+import dest from '../assets/images/dest.png';
+import locate from '../assets/images/localisation.png';
+import search from '../assets/images/search.png';
+import params from '../assets/images/params.png';
+import talk from '../assets/images/talk.png';
+import support from '../assets/images/support.png';
+import historique from '../assets/images/historique.png';
+import reduction from '../assets/images/reduction.png';
+import ticket from '../assets/images/ticket.png';
+import parrain from '../assets/images/parrainage.png';
+import settings from '../assets/images/settings.png';
+import langue from '../assets/images/langue.png';
+import logout from '../assets/images/logout.png';
+import deleted from '../assets/images/delete.png';
+import del from '../assets/images/deletedroite.png';
 
 
 export const footer = [
@@ -282,5 +300,24 @@ export const images ={
     pizza,
     riz,
     attieke,
-    etoile
+    etoile,
+    expand,
+    fil,
+    depart,
+    dest,
+    locate,
+    heure,
+    search,
+    params,
+    talk,
+    support,
+    historique,
+    reduction,
+    ticket,
+    parrain,
+    settings,
+    logout,
+    langue,
+    deleted,
+    del,
 };

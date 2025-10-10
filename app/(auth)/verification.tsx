@@ -23,11 +23,13 @@ import CustomButton from '@/components/CustomButton';
 import { useSignUp } from '@clerk/clerk-expo';
 import useAuthStore from '@/store/auth.store';
 import LottieView from 'lottie-react-native';
+import { useTranslation } from 'react-i18next';
 
 const CELL_COUNT = 6;
 const time_resend = 30;
 
 export default function Verification() {
+  const {t} = useTranslation();
   const [secondsLeft, setSecondsLeft] = useState(time_resend);
   const [value, setValue] = useState('');
   const [fieldKey,setFieldKey]= useState(0);
@@ -90,8 +92,8 @@ const startTimer = useCallback(() => {
       </View>
 
       <View className="w-full px-6 pt-5 bg-secondary">
-        <Text className="font-poppins-bold text-[20px]">Verification de votre email</Text>
-        <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">Entrez le code envoyer dans votre email pour continuer</Text>
+        <Text className="font-poppins-bold text-[20px]">{t('verification.title')}</Text>
+        <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">{t('verification.subtitle')}</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -131,19 +133,19 @@ const startTimer = useCallback(() => {
                     }}
                 >
                     {secondsLeft > 0
-                    ? `Renvoyer le code (${format(secondsLeft)})`
-                    : 'Renvoyer le code'}
+                    ? `${t('verification.resend')}(${format(secondsLeft)})`
+                    : t('verification.resend')}
                 </Text>
             </Pressable>
         {isLoading && (<LottieView autoPlay source={loaders.loader} style={{width: 40, height:40}}/>)}
         {error && (
             <View>
-            <Text className="font-semibold text-red-800 text-center mt-5">Le code est incorrecte</Text>
+            <Text className="font-semibold text-red-800 text-center mt-5">{t('verification.codeInvalid')}</Text>
 
             </View>
             )}
 
-        <CustomButton titre="Verifier maintenant" onPress={onVerify} disabled={isCodeInvalid || isLoading}/>
+        <CustomButton titre={t('verification.verifyNow')} onPress={onVerify} disabled={isCodeInvalid || isLoading}/>
 
       </KeyboardAvoidingView>
 

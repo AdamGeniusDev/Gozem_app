@@ -1,8 +1,8 @@
 import { images } from '@/constants';
 import useLocationStore from '@/store/location.store';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import { router } from 'expo-router';
-import React, { useRef } from 'react';
+import { router, useSegments } from 'expo-router';
+import React, { useMemo, useRef } from 'react';
 import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import {  useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +18,14 @@ type MapProps = { children?: React.ReactNode}
 const Map = ({children}: MapProps) => {
   const regionFromstate= useLocationStore(s=>s.region);
 
+  const segments = useSegments();
+  const heure = segments[1] === 'heure'
+  const porto = segments[1]=== 'porto'
+  const ouidah = segments[1] === 'ouidah'
+
+
   const dimension = useWindowDimensions();
+  const height = dimension.height*0.8
 
   const insets = useSafeAreaInsets();
   const modalRef =useRef<BottomSheet>(null);
@@ -27,8 +34,17 @@ const Map = ({children}: MapProps) => {
 
   const back = ()=> router.back();
 
-  const snapPoints= ['35%','50%'];
+  const snapPoints = useMemo<string[]>(() => {
+  if (heure) return ['38%'];                // 1 seul point
+  if (porto || ouidah) return ['45%'];                // 1 seul point
+  return ['38%', '51%'];                    // 2 points par défaut
+}, [heure, porto,ouidah]);
   
+const initialIndex= useMemo(()=>{
+    if(snapPoints.length ===1) return 0;
+
+    return 1;
+},[snapPoints])
   const region = regionFromstate ?? FALLBACK_REGION
 
   const static_url = `https://maps.geoapify.com/v1/staticmap?style=osm-bright-smooth`+
@@ -40,7 +56,7 @@ const Map = ({children}: MapProps) => {
 
   return (
       <View className='flex-1'>
-         <Image source={{uri: static_url}} className='w-full h-full'/>
+         <Image source={{uri: static_url}} className='w-full' style={{height: height}}/>
             <View className='absolute bg-white h-[50px] w-[50px] rounded-full'
             style={{
               marginTop: bottom,
@@ -58,7 +74,7 @@ const Map = ({children}: MapProps) => {
          <BottomSheet
          ref={modalRef}
          snapPoints={snapPoints}
-         index={1}
+         index={initialIndex}
          enableDynamicSizing={false}
          enableHandlePanningGesture={false}
          handleIndicatorStyle={{
@@ -68,7 +84,7 @@ const Map = ({children}: MapProps) => {
          >
           <BottomSheetView>
             <View>
-              {children ?? <Text style={{ color: '#999' }}>Aucun contenu</Text>}
+              {children ?? <Text style={{ color: '#999', padding: 15 }}>Aucun contenu</Text>}
             </View>
           </BottomSheetView>
          </BottomSheet>

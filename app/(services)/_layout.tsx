@@ -11,6 +11,7 @@ export default function ServicesLayout() {
         <Stack.Screen name='porto'/>
         <Stack.Screen name='ouidah'/>
         <Stack.Screen name='evenement'/>      
+        <Stack.Screen name='aide'/>      
     </Stack>
   )
 }

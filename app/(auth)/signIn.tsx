@@ -8,8 +8,10 @@ import CustomButton from '@/components/CustomButton'
 import { isClerkAPIResponseError, useAuth, useSignIn } from '@clerk/clerk-expo'
 import useAuthStore from '@/store/auth.store'
 import { findUser } from '@/lib/appwrite'
+import { useTranslation } from 'react-i18next'
 
 const SignIn = () => {
+  const {t} = useTranslation();
   const [password, setPassword] = useState('');
   const [viewPassword, setViewPassword] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -31,13 +33,14 @@ const SignIn = () => {
       const res = await signIn.create({ identifier: email.trim().toLowerCase(), password });
 
       if (res.status !== 'complete' || !res.createdSessionId) {
-        setError("Identifiants incorrects. Vérifiez l’email et le mot de passe.");
+        setError(t('signIn.incorrectIdentifier'));
         return;
       }
 
       await setActive({ session: res.createdSessionId });
 
-      if (!userId) { router.replace('/'); return; }
+      if (!userId) { return }
+      console.log('Deux choses',userId)
 
       const check = await findUser(getToken, { clerkUserId: userId, email });
       if (!check?.exists || !check?.complete) {
@@ -46,18 +49,18 @@ const SignIn = () => {
         router.replace('/');
       }
     } catch (e: any) {
-      let msg = e?.message ?? "Une erreur s'est produite";
+      let msg = e?.message ?? t('signIn.msg1');
 
       if (isClerkAPIResponseError?.(e)) {
         const err0 = e.errors?.[0];
         msg = err0?.longMessage || err0?.message || msg;
 
         const code = String(err0?.code ?? '');
-        if (code === 'form_password_incorrect')      msg = "Mot de passe incorrect.";
-        if (code === 'identifier_not_found')         msg = "Aucun compte trouvé pour cet email.";
-        if (code === 'form_identifier_invalid')      msg = "Email invalide.";
-        if (code === 'too_many_attempts')            msg = "Trop de tentatives. Réessayez plus tard.";
-        if (code === 'user_locked')                  msg = "Compte temporairement verrouillé.";
+        if (code === 'form_password_incorrect')      msg = t('signIn.msg2');
+        if (code === 'identifier_not_found')         msg = t("signIn.msg3");
+        if (code === 'form_identifier_invalid')      msg = t("signIn.msg4");
+        if (code === 'too_many_attempts')            msg = t("signIn.msg5");
+        if (code === 'user_locked')                  msg = t("signIn.msg6");
       }
 
       setError(msg);
@@ -81,16 +84,15 @@ const SignIn = () => {
         className="flex-1 flex-col items-center justify-between bg-secondary-100 px-5"
       >
         <View className="py-5">
-          <Text className="font-poppins-bold text-[20px]">Content de vous revoir</Text>
-          <Text className="font-regular text-[14px] text-neutral-500 mb-4">
-            Entrez votre mot de passe pour pouvoir vous connecter et profiter de nos services
+          <Text className="font-poppins-bold text-[20px]">{t('signIn.welcomeBack')}</Text>
+          <Text className="font-regular text-[14px] text-neutral-500 mb-4">{t('signIn.passText')}
           </Text>
 
           <CustomInput
             value={password}
             image={images.cadenas}
             secureTextEntry={viewPassword}
-            placeholder="Entrez votre mot de passe"
+            placeholder={t('signIn.placeholderPassword')}
             onChangeText={(t) => { setPassword(t); if (error) setError(''); }}
             onPress={see}
             icon={viewPassword ? images.visible : images.nvisible}
@@ -98,7 +100,7 @@ const SignIn = () => {
 
           <Pressable onPress={() => router.push('/(auth)/forgotPassword')}>
             <Text className="font-poppins-bold text-[14px] text-primary-400 mt-3">
-              Mot de passe oublié
+              {t('signIn.forgotPassword')}
             </Text>
           </Pressable>
 
@@ -117,7 +119,7 @@ const SignIn = () => {
           />
         ) : (
           <CustomButton
-            titre="Connexion"
+            titre={t('signIn.signInButton')}
             onPress={submit}
             disabled={!password}
           />

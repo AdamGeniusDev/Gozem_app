@@ -1,0 +1,218 @@
+{
+    "welcome":{
+        "enterMail":"Entrez votre e-mail",
+        "enterMailSubtitle": "Entrez votre email pour vous connecter ou pour créer un nouveau compte."
+    },
+    "signIn":{
+        "msg": "Une erreur s'est produite",
+        "msg1": "Mot de passe incorrect.",
+        "msg2": "Aucun compte trouvé pour cet email.",
+        "msg3": "Email invalide.",
+        "msg4": "Trop de tentatives. Réessayez plus tard.",
+        "msg5": "Compte temporairement verrouillé.",
+        "welcomeBack": "Content de vous revoir",
+        "passText": " Entrez votre mot de passe pour pouvoir vous connecter et profiter de nos services",
+        "placeholderPassword": "Entrez votre mot de passe",
+        "forgotPassword": "Mot de passe oublié ?",
+        "signInButton": "Connexion",
+        "incorrectIdentifier": "Identifiant incorrect"
+    },
+    "sign": {
+        "enterMail":"Entrez votre e-mail",
+        "enterMailSubtitle": "Entrez votre email pour vous connecter ou pour créer un nouveau compte.",
+        "validation" : "Suivant",
+        "newEmail": "Nouvel email",
+        "newEmailSubtitle": "Choisissez la vérification pour continuer",
+        "continueEmail": "Continuer avec l'email",
+        "Erreur": "Erreur :"
+    },
+    "verification":{
+    "title": "Vérification de votre e-mail",
+    "subtitle": "Entrez le code envoyé à votre e-mail pour continuer.",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer le code ({{time}})",
+    "verifyNow": "Vérifier maintenant",
+    "codeInvalid": "Le code est incorrect."
+    },
+    "password":{
+    "title": "Définissez votre mot de passe",
+    "subtitle": "Créez un mot de passe. Vous en aurez besoin pour vous connecter.",
+    "placeholder": "Entrez votre mot de passe",
+    "placeholderConfirm": "Confirmez votre mot de passe",
+    "mismatch": "Les mots de passe ne correspondent pas.",
+    "requirementsTitle": "Votre mot de passe doit contenir :",
+    "reqNumber": "au moins un chiffre [0-9]",
+    "reqLower": "au moins une lettre minuscule [a-z]",
+    "reqUpper": "au moins une lettre majuscule [A-Z]",
+    "reqSpecial": "au moins un caractère spécial comme ! @ # & ()",
+    "reqLength": "entre 8 et 20 caractères",
+    "next": "Suivant",
+    "errorGeneric": "Une erreur est survenue.",
+    "errorWithMessage": "Une erreur est survenue : {{message}}"
+    },
+    
+  "forgotPassword": {
+    "title": "Réinitialiser le mot de passe",
+    "emailPlaceholder": "Votre email",
+    "codePlaceholder": "Code reçu par email",
+    "newPasswordPlaceholder": "Nouveau mot de passe",
+    "sendCode": "Envoyer le code",
+    "sendingCode": "Envoi…",
+    "validate": "Valider",
+    "validating": "Validation…",
+    "errorGeneric": "Une erreur est survenue.",
+    "errorMessage": "Erreur : {{message}}"
+  },
+   "info": {
+    "title": "Dites-nous en un peu plus sur vous",
+    "subtitle": "Renseignez les champs suivants pour nous permettre de vous connaître et de créer votre profil.",
+    "placeholders": {
+      "name": "Entrez votre nom*",
+      "firstname": "Entrez votre nom de famille*",
+      "gender": "Genre*",
+      "birthdate": "Date de naissance*"
+    },
+    "avatar": {
+      "add": "Ajouter une photo de profil",
+      "label": "Photo de profil"
+    },
+    "genderSheet": {
+      "title": "Sélectionnez le sexe",
+      "male": "Homme",
+      "female": "Femme"
+    },
+    "dateSheet": {
+      "title": "Date d'anniversaire",
+      "cancel": "Annuler",
+      "ok": "D'accord"
+    },
+    "button": {
+      "submit": "Finaliser votre inscription",
+      "loading": "Chargement..."
+    },
+    "error": {
+      "generic": "Une erreur s'est produite : {{message}}",
+      "title": "Erreur"
+    }
+  },
+   "home": {
+    "walletTitle": "Portefeuille",
+    "walletBalance": "{{amount}} {{currency}}",
+    "currency": "F",
+    "freeDeliveryTitle": "Livraison gratuite 😋🤩",
+    "freeDeliverySubtitle": "Chez nos nouveaux restos"
+  },
+   "account": {
+    "title": "Compte",
+    "menu": {
+      "activityHistory": "Historique de mes activités",
+      "discountCodes": "Codes de réduction",
+      "myTickets": "Mes tickets",
+      "referral": "Parrainage",
+      "settings": "Paramètres du compte"
+    },
+    "links": {
+      "terms": "Conditions générales d’utilisation",
+      "communityCharter": "Charte de la communauté Gozem"
+    }
+  },
+  "addresses": {
+    "title": "Adresses",
+    "tabs": {
+      "saved": "Enregistrées",
+      "pending": "Demandes en attente"
+    },
+    "empty": {
+      "saved": "Aucune adresse enregistrée.",
+      "pending": "Aucune demande en attente."
+    },
+    "actions": {
+      "add": "Ajouter une adresse"
+    }
+  },
+  "activity": {
+    "title": "Activités",
+    "support": "Support",
+    "tabs": {
+      "ongoing": "En cours",
+      "history": "Historique"
+    },
+    "content": {
+      "saved": "Enregistrer",
+      "pending": "Demande en attente"
+    }
+  },
+   "services": {
+    "tabs": {
+      "byDistance": "À la distance",
+      "byDuration": "À la durée"
+    },
+    "headers": {
+      "definePickup": "Définir les adresses de départ"
+    },
+    "orderFor": {
+      "label": "Commande pour",
+      "me": "Moi-même",
+      "options": {
+        "gozemContact": "Contact Gozem",
+        "phoneContact": "Contact téléphonique",
+        "someoneElse": "Quelqu'un d'autre"
+      }
+    },
+    "addresses": {
+      "pickupLabel": "Adresse de départ",
+      "pickupCurrent": "Ma position actuelle",
+      "dropoffLabel": "Adresse de destination",
+      "recentFromHere": "Destinations récentes depuis ce lieu",
+      "continueWithoutDropoff": "Continuer sans destination"
+    },
+    "duration": {
+      "label": "Durée de la course"
+    },
+    "actions": {
+      "continue": "Continuer"
+    }
+  },
+  "profile": {
+    "header": {
+      "savedOn": "Enregistré le "
+    },
+    "fields": {
+      "lastname": "Nom de famille",
+      "firstname": "Prénom",
+      "email": "E-mail",
+      "gender": "Sexe",
+      "birthday": "Date d’anniversaire"
+    },
+    "genders": {
+      "male": "Homme",
+      "female": "Femme"
+    },
+    "modals": {
+      "editFirstnameTitle": "Nom de famille",
+      "editNameTitle": "Prénom",
+      "genderTitle": "Sélectionnez le sexe",
+      "birthdayTitle": "Date d’anniversaire",
+      "validate": "Valider",
+      "cancel": "Annuler",
+      "ok": "D’accord"
+    },
+    "actions": {
+      "saveChanges": "Enregistrer les modifications",
+      "saving": "Enregistrement…"
+    },
+    "errors": {
+      "title": "Erreur",
+      "saveFailed": "Impossible de sauvegarder."
+    }
+  },
+  "layoutRoot":{
+    "home": "Acceuil",
+     "help": "Aide",
+     "addresses": "Adresses",
+     "activity": "Activité",
+     "account": "Compte"
+
+  }
+
+}

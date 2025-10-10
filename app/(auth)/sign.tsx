@@ -11,9 +11,12 @@ import validator from 'validator'
 import { useAuth, useSignUp } from '@clerk/clerk-expo'
 import useAuthStore from '@/store/auth.store'
 import LottieView from 'lottie-react-native'
+import { useTranslation } from 'react-i18next'
 
 
 const Sign = () => {
+
+  const {t} = useTranslation();
 
   const [email,setEmail] = useState('');
 
@@ -128,13 +131,13 @@ const renderBackdrop = useCallback(
       keyboardVerticalOffset={keyboardOffset}
       className="flex-1 flex-col justify-between bg-secondary-100 items-center px-5">
         <View className="bg-secondary py-5">
-        <Text className="font-poppins-bold text-[20px]">Entrez votre email</Text>
-        <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">Entrez votre email pour vous connecter ou pour créer un nouveau compte.</Text>
+        <Text className="font-poppins-bold text-[20px]">{t('sign.enterMail')}</Text>
+        <Text className="font-regular mb-4 mt-[-3] text-[14px] text-neutral-500">{t('sign.enterMailSubtitle')}</Text>
         <CustomInput 
         value={email}
         onChangeText={setEmail}
         image={images.email} 
-        placeholder='Entrer votre email' 
+        placeholder={t('sign.enterMail')}
         autoCorrect={false}
         inputMode='email'
         keyboardType='email-address'
@@ -166,8 +169,8 @@ const renderBackdrop = useCallback(
        
         <BottomSheetView className="py-10 px-5 gap-y-3 mt-[-3] mb-3">
         
-          <Text className="font-black text-2xl ">Nouveau email?</Text>
-          <Text className="font-medium text-[14px]">Choisissez la vérification pour continuer</Text>
+          <Text className="font-black text-2xl ">{t('sign.newEmail')}</Text>
+          <Text className="font-medium text-[14px]">{t('sign.newEmailSubtitle')}</Text>
           
           <Pressable className="bg-neutral-100 flex flex-row items-center h-[50] rounded-full border-neutral-200 border-2" onPress={onSend}>
             <Image source={images.gmail} className="absolute ml-3 h-[20] w-[20] " resizeMode='contain' />
@@ -185,9 +188,9 @@ const renderBackdrop = useCallback(
             />
             </View>
             :
-            <Text className="font-semibold w-full text-center text-neutral-800">Continuer via Email</Text>}
+            <Text className="font-semibold w-full text-center text-neutral-800">{t('sign.continueEmail')}</Text>}
           </Pressable>
-            {error? <Text className="font-medium text-sm text-center text-red-800">Erreur : {error}</Text>: null}
+            {error? <Text className="font-medium text-sm text-center text-red-800">{t('sign.Erreur')} : {error}</Text>: null}
         </BottomSheetView>
       </BottomSheetModal>
     </SafeAreaView>
