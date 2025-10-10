@@ -6,9 +6,9 @@ export default async ({ req, res, log }) => {
     const { token } = JSON.parse(req.body);
 
     const client = new Client()
-      .setEndpoint(process.env.APPWRITE_ENDPOINT)
-      .setProject(process.env.APPWRITE_PROJECT_ID)
-      .setKey(process.env.APPWRITE_API_KEY);
+      .setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT)
+      .setProject(process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID)
+      .setKey(process.env.EXPO_PUBLIC_APPWRITE_API_KEY);
 
     const account = new Account(client);
 
