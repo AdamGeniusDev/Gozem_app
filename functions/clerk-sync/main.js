@@ -1,7 +1,42 @@
 import { Client, Users } from "node-appwrite";
+import crypto from "crypto";
+
+function verifyClerkSignature(payload, headers, secret) {
+  const svix_id = headers['svix-id'];
+  const svix_timestamp = headers['svix-timestamp'];
+  const svix_signature = headers['svix-signature'];
+
+  if (!svix_id || !svix_timestamp || !svix_signature) {
+    return false;
+  }
+
+  const signedContent = `${svix_id}.${svix_timestamp}.${payload}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(signedContent)
+    .digest('base64');
+
+  return svix_signature.includes(expectedSignature);
+}
+
 
 export default async ({ req, res, log, error }) => {
   try {
+
+     if (process.env.CLERK_WEBHOOK_SECRET) {
+      const isValid = verifyClerkSignature(
+        req.body,
+        req.headers,
+        process.env.CLERK_WEBHOOK_SECRET
+      );
+
+      if (!isValid) {
+        error('❌ Invalid webhook signature');
+        return res.json({ error: 'Invalid signature' }, 401);
+      }
+      
+      log('✅ Webhook signature verified');
+    }
     // Parser le webhook de Clerk
     const clerkEvent = JSON.parse(req.body || '{}');
     
