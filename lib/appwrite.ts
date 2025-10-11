@@ -96,19 +96,7 @@ class AppwriteAuthManager {
 
         try {
             await account.get();
-        } catch {
-            // Si pas de session, vérifier si l'utilisateur existe dans Appwrite (synchronisé depuis Clerk)
-            if (userId) {
-                try {
-                    // Créer une session anonyme temporaire pour créer le JWT
-                    await account.createAnonymousSession();
-                } catch (e) {
-                    console.warn('Session anonyme déjà existante', e);
-                }
-            } else {
-                await account.createAnonymousSession();
-            }
-        }
+        } catch {}
 
         const { jwt } = await account.createJWT();
         client.setJWT(jwt);
