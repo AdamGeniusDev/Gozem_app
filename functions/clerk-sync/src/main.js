@@ -1,9 +1,15 @@
-import { Client, Users, Databases, Query } from "node-appwrite";
+import { Client, Users } from "node-appwrite";
 
 export default async ({ req, res, log, error }) => {
   try {
     // Parser le webhook de Clerk
-    const clerkEvent = JSON.parse(req.body || '{}');
+    // req.body peut être soit un string, soit déjà un objet
+    let clerkEvent;
+    if (typeof req.body === 'string') {
+      clerkEvent = JSON.parse(req.body);
+    } else {
+      clerkEvent = req.body;
+    }
     
     log(`📨 Received Clerk event: ${clerkEvent.type}`);
 
@@ -14,7 +20,6 @@ export default async ({ req, res, log, error }) => {
       .setKey(process.env.APPWRITE_API_KEY);
 
     const users = new Users(client);
-    const databases = new Databases(client);
 
     // Traiter selon le type d'événement Clerk
     switch (clerkEvent.type) {
@@ -25,7 +30,7 @@ export default async ({ req, res, log, error }) => {
         log(`📧 Email: ${user.email_addresses[0]?.email_address}`);
         
         try {
-          // 1. CRÉER L'UTILISATEUR DANS APPWRITE AUTH
+          // CRÉER L'UTILISATEUR DANS APPWRITE AUTH
           const newUser = await users.create(
             user.id, // Utiliser l'ID de Clerk comme ID Appwrite
             user.email_addresses[0]?.email_address || `${user.id}@noemail.local`,
@@ -37,7 +42,6 @@ export default async ({ req, res, log, error }) => {
           log(`✅ User created in Appwrite Auth: ${newUser.$id}`);
           log(`✅ Name: ${newUser.name}`);
           log(`✅ Email: ${newUser.email}`);
-
 
           return res.json({ 
             success: true, 
@@ -64,7 +68,7 @@ export default async ({ req, res, log, error }) => {
         log(`🔄 Updating user: ${user.id}`);
         
         try {
-          // Mettre à jour dans Auth
+          // Mettre à jour le nom dans Auth
           await users.updateName(
             user.id,
             `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'
@@ -79,31 +83,6 @@ export default async ({ req, res, log, error }) => {
           }
           
           log(`✅ User updated in Appwrite: ${user.id}`);
-
-          // Mettre à jour aussi dans la collection si elle existe
-          try {
-            const { documents } = await databases.listDocuments(
-              process.env.APPWRITE_DATABASE_ID,
-              process.env.APPWRITE_USER_COLLECTION_ID,
-              [Query.equal('clerkUserId', user.id)]
-            );
-
-            if (documents.length > 0) {
-              await databases.updateDocument(
-                process.env.APPWRITE_DATABASE_ID,
-                process.env.APPWRITE_USER_COLLECTION_ID,
-                documents[0].$id,
-                {
-                  email: user.email_addresses[0]?.email_address || '',
-                  name: user.first_name || '',
-                  firstname: user.last_name || '',
-                }
-              );
-              log(`✅ User document updated in collection`);
-            }
-          } catch (dbError) {
-            log(`⚠️ Could not update user in collection: ${dbError.message}`);
-          }
 
           return res.json({ 
             success: true, 
@@ -135,32 +114,12 @@ export default async ({ req, res, log, error }) => {
       case 'user.deleted': {
         const userId = clerkEvent.data.id;
         
-        log(`🗑️ Deleting user: ${userId}`);
+        log(`🗑️ Deleting user from Appwrite Auth: ${userId}`);
         
         try {
-          // Supprimer de Auth
+          // Supprimer de Auth uniquement
           await users.delete(userId);
           log(`✅ User deleted from Appwrite Auth: ${userId}`);
-
-          // Supprimer aussi de la collection
-          try {
-            const { documents } = await databases.listDocuments(
-              process.env.APPWRITE_DATABASE_ID,
-              process.env.APPWRITE_USER_COLLECTION_ID,
-              [Query.equal('clerkUserId', userId)]
-            );
-
-            if (documents.length > 0) {
-              await databases.deleteDocument(
-                process.env.APPWRITE_DATABASE_ID,
-                process.env.APPWRITE_USER_COLLECTION_ID,
-                documents[0].$id
-              );
-              log(`✅ User document deleted from collection`);
-            }
-          } catch (dbError) {
-            log(`⚠️ Could not delete user from collection: ${dbError.message}`);
-          }
 
         } catch (deleteError) {
           if (deleteError.code === 404) {
