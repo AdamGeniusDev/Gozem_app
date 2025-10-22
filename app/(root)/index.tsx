@@ -10,6 +10,7 @@ import useLocationStore from "@/store/location.store";
 import { useUserStore } from "@/store/user.store";
 import { useTranslation } from "react-i18next";
 import { Redirect } from "expo-router";
+import useNotificationStore from "@/store/notification.store";
 
 export default function Index() {
   const {t}= useTranslation();
@@ -17,6 +18,8 @@ export default function Index() {
   const avatar = useUserStore(state => state.avatar);
   const loadUser = useUserStore(state => state.loadUser);
   const {getAll} = useLocationStore();
+  const {initialize} = useNotificationStore();
+  const {requestPermission} = useNotificationStore();
 
   const number = 0;
 
@@ -28,6 +31,11 @@ export default function Index() {
  useEffect(()=>{
   getAll();  
  },[getAll]);
+
+ useEffect (() => {
+  requestPermission();
+  initialize();
+ },[initialize,requestPermission]);
 
  if(!isSignedIn) return <Redirect href='/' />
 

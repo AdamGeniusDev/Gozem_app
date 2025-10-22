@@ -48,7 +48,7 @@
     "reqLength": "entre 8 et 20 caractères",
     "next": "Suivant",
     "errorGeneric": "Une erreur est survenue.",
-    "errorWithMessage": "Une erreur est survenue : {{message}}"
+    "errorWithMessage": "Une erreur est survenue : "
     },
     
   "forgotPassword": {
@@ -61,7 +61,7 @@
     "validate": "Valider",
     "validating": "Validation…",
     "errorGeneric": "Une erreur est survenue.",
-    "errorMessage": "Erreur : {{message}}"
+    "errorMessage": "Erreur :"
   },
    "info": {
     "title": "Dites-nous en un peu plus sur vous",
@@ -91,7 +91,7 @@
       "loading": "Chargement..."
     },
     "error": {
-      "generic": "Une erreur s'est produite : {{message}}",
+      "generic": "Une erreur s'est produite :",
       "title": "Erreur"
     }
   },
@@ -213,6 +213,50 @@
      "activity": "Activité",
      "account": "Compte"
 
-  }
+  },
+  "langue": {
+    "title": "Changer de langue",
+    "french": "Francais",
+    "english": "Anglais",
+    "submit": "Valider",
+    "loading": "Chargement"
+  },
+   "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "notifications": "Paramètres des notifications",
+    "updatePassword": "Modifier le mot de passe",
+    "logout": "Déconnexion",
+    "logoutTitle": "Déconnexion",
+    "logoutMessage": "Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez saisir à nouveau vos informations d'identification lorsque vous souhaiterez vous reconnecter.",
+    "logoutButton": "Oui, déconnexion",
+    "logoutLoading": "Déconnexion...",
+    "deleteAccount": "Supprimer le compte",
+    "back": "Retour"
+  },
+  "updatePassword": {
+      "title": "Modifier le mot de passe",
+      "subtitle": "Pour votre sécurité, veuillez entrer votre mot de passe actuel",
+      "actual": "Mot de passe actuel",
+      "placeholder": "Nouveau mot de passe",
+      "placeholderConfirm": "Confirmez le nouveau mot de passe",
+      "mismatch": "Les mots de passe ne correspondent pas",
+      "requirementsTitle": "Votre mot de passe doit contenir :",
+      "reqNumber": "au moins un chiffre [0-9]",
+      "reqLower": "au moins une lettre minuscule [a-z]",
+      "reqUpper": "au moins une lettre majuscule [A-Z]",
+      "reqSpecial": "au moins un caractère spécial (ex. : ! @ # & ())",
+      "reqLength": "entre 8 et 20 caractères",
+      "next": "Mettre à jour le mot de passe",
+      "errorGeneric": "Une erreur est survenue",
+      "errorWithMessage": "Une erreur est survenue : ",
+      "successTitle": "Succès",
+      "successMessage": "Votre mot de passe a été mis à jour avec succès",
+      "errorTitle": "Erreur",
+      "errorIncorrectPassword": "Le mot de passe actuel est incorrect",
+      "errorCompromisedPassword": "Ce mot de passe a été compromis. Choisissez-en un autre",
+      "noPasswordTitle": "Aucun mot de passe configuré",
+      "noPasswordMessage": "Vous n'avez pas de mot de passe configuré."
+    }
 
 }

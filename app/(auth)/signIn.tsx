@@ -23,7 +23,6 @@ const SignIn = () => {
 
   const submit = async () => {
     if (!isLoaded || submitting) return;
-    if (!email) { setError("Adresse email manquante."); return; }
     if (!password) { setError("Entrez votre mot de passe."); return; }
 
     setSubmitting(true);

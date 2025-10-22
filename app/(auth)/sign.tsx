@@ -6,13 +6,15 @@ import { router } from 'expo-router'
 import CustomButton from '@/components/CustomButton'
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet'
 import CustomInput from '@/components/CustomInput'
-//cette installation n'est pas simple npm i validator ne marche il faudra utiliser  npm i -D @types/validator pour le bon fonctionnement 
-import validator from 'validator'
 import { useAuth, useSignUp } from '@clerk/clerk-expo'
 import useAuthStore from '@/store/auth.store'
 import LottieView from 'lottie-react-native'
 import { useTranslation } from 'react-i18next'
 
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
 const Sign = () => {
 
@@ -22,7 +24,7 @@ const Sign = () => {
 
   const insets= useSafeAreaInsets();
   const keyboardOffset = insets.bottom + 5;
-   const isEmailInvalid= !validator.isEmail(email);
+   const isEmailInvalid= !isValidEmail(email);
 
   const bottomRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(()=>['25%'],[]);

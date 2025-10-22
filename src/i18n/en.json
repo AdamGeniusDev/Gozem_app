@@ -175,7 +175,7 @@
   },
   "profile": {
     "header": {
-      "savedOn": "Saved on {{date}}"
+      "savedOn": "Saved on "
     },
     "fields": {
       "lastname": "Last name",
@@ -213,5 +213,50 @@
      "activity": "Activity",
      "account": "Account"
 
-  }
+  },
+   "langue": {
+    "title": "Change language",
+    "french": "French",
+    "english": "English",
+    "submit": "Validate",
+    "loading": "Loading..."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "notifications": "Notification settings",
+    "updatePassword": "Change password",
+    "logout": "Logout",
+    "logoutTitle": "Logout",
+    "logoutMessage": "Are you sure you want to log out? You’ll need to re-enter your credentials when you wish to sign in again.",
+    "logoutButton": "Yes, logout",
+    "logoutLoading": "Logging out...",
+    "deleteAccount": "Delete account",
+    "back": "Back"
+  },
+"updatePassword": {
+      "title": "Change Password",
+      "subtitle": "For your security, please enter your current password",
+      "actual": "Current password",
+      "placeholder": "New password",
+      "placeholderConfirm": "Confirm new password",
+      "mismatch": "Passwords do not match",
+      "requirementsTitle": "Your password must contain:",
+      "reqNumber": "at least one digit [0-9]",
+      "reqLower": "at least one lowercase letter [a-z]",
+      "reqUpper": "at least one uppercase letter [A-Z]",
+      "reqSpecial": "at least one special character (e.g.: ! @ # & ())",
+      "reqLength": "between 8 and 20 characters",
+      "next": "Update Password",
+      "errorGeneric": "An error occurred",
+      "errorWithMessage": "An error occurred: ",
+      "successTitle": "Success",
+      "successMessage": "Your password has been successfully updated",
+      "errorTitle": "Error",
+      "errorIncorrectPassword": "The current password is incorrect",
+      "errorCompromisedPassword": "This password has been compromised. Please choose another one",
+      "noPasswordTitle": "No Password Configured",
+      "noPasswordMessage": "You don't have a password configured."
+    }
+
 }

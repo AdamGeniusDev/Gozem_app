@@ -1,4 +1,4 @@
-import { createUsers} from '@/lib/appwrite'
+import { createUsers, logoutAppwrite} from '@/lib/appwrite'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 import { create } from 'zustand'
@@ -43,6 +43,7 @@ type Auth ={
   reset: () => void
   getPassword: (password:string) => void
   getInfo: ({name,firstname,gender,date,avatar}:{name:string,firstname:string,gender:string,date:Date,avatar:string|null}) => void
+  logout: ()=> Promise<void>
 
   finalizeCreation: ({getToken,clerkUserId}:{getToken: GetTokenFn, clerkUserId: string}) =>Promise<string>
   activateSessionAndPassword: ({setActive,finalizeSignUp}:{setActive:SetActiveFn,finalizeSignUp: FinalizeSignUpFn})=> Promise<{sessionId: string,userId:string}>
@@ -232,6 +233,26 @@ activateSessionAndPassword: async ({
           pendingUserId: null,
           clerkUserId: null,
         }),
+        logout: async()=>{
+          try{
+            
+            await logoutAppwrite();
+
+            set({
+              email: '',
+              password: '',
+              name: '',
+              firstname: '',
+              gender: '',
+              date: new Date(),
+              avatar: null,
+              isAuthenticated: false,
+              clerkUserId: null,
+            })
+          }catch(error:any){
+            console.log('Error logout',error)
+          }
+        }
     }),
     {
       name: 'auth-store',

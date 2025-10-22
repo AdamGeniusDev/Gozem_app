@@ -2,7 +2,7 @@ import { CreateUserPrams, UserDoc } from '@/types/type';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
-import { Account, Client, Databases, ID, Permission, Query, Role, Storage } from 'react-native-appwrite';
+import { Account, Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
 
 type GetTokenFn = (opt?: { skipCache?: boolean }) => Promise<string | null>;
 
@@ -28,162 +28,110 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 
+let cachedJWT: string | null = null;
+let jwtExpiry: number | null = null;
+let refreshPromise: Promise<void> | null = null;
 
-class AppwriteAuthManager {
-    private jwtToken: string | null = null;
-    private jwtExpiry: number = 0;
-    private sessionPromise: Promise<void> | null = null;
-    private lastUserId: string | null = null;
-    private refreshTimer: any = null;
+const JWT_LIFETIME = 10 * 60 * 1000; // 13 minutes (expire à 15, on garde 2 min de marge)
 
-    private isJWTValid(): boolean {
-        return this.jwtToken !== null && Date.now() < (this.jwtExpiry - 10 * 60 * 1000);
-    }
-
-    private resetIfUserChanged(userId: string | null) {
-        if (this.lastUserId !== userId) {
-            this.jwtToken = null;
-            this.jwtExpiry = 0;
-            this.sessionPromise = null;
-            this.lastUserId = userId;
-            if (this.refreshTimer) {
-                clearTimeout(this.refreshTimer);
-                this.refreshTimer = null;
-            }
-        }
-    }
-
-    private scheduleRefresh(getToken: GetTokenFn, userId?: string) {
-        if (this.refreshTimer) clearTimeout(this.refreshTimer);
-        
-        const refreshIn = this.jwtExpiry - Date.now() - 2 * 60 * 1000;
-        
-        if (refreshIn > 0) {
-            this.refreshTimer = setTimeout(async () => {
-                try {
-                    await this.refreshAuth(getToken, userId);
-                } catch (error) {
-                    console.error('Auto-refresh failed:', error);
-                }
-            }, refreshIn);
-        }
-    }
-
-    async ensureAuth(getToken: GetTokenFn, userId?: string) {
-        this.resetIfUserChanged(userId || null);
-
-        if (this.sessionPromise) return this.sessionPromise;
-
-        if (this.isJWTValid()) return;
-
-        this.sessionPromise = this._establishSession(getToken, userId);
-
-        try {
-            await this.sessionPromise;
-        } finally {
-            this.sessionPromise = null;
-        }
-    }
-
-    private async _establishSession(getToken: GetTokenFn, userId?: string) {
-        const token = await getToken({ skipCache: true });
-        if (!token) {
-            this.jwtToken = null;
-            this.jwtExpiry = 0;
-            await account.deleteSession('current').catch(() => {});
-            throw new Error('Utilisateur non connecté. Merci de vous reconnecter.');
-        }
-
-        try {
-            await account.get();
-        } catch {}
-
-        const { jwt } = await account.createJWT();
-        client.setJWT(jwt);
-
-        this.jwtToken = jwt;
-        this.jwtExpiry = Date.now() + 15 * 60 * 1000;
-        
-        this.scheduleRefresh(getToken, userId);
-    }
-
-    async refreshAuth(getToken: GetTokenFn, userId?: string) {
-        if (this.refreshTimer) {
-            clearTimeout(this.refreshTimer);
-            this.refreshTimer = null;
-        }
-        this.jwtToken = null;
-        this.jwtExpiry = 0;
-        await this.ensureAuth(getToken, userId);
-    }
+function isJWTValid(): boolean {
+    return cachedJWT !== null && jwtExpiry !== null && Date.now() < jwtExpiry;
 }
 
-const authManager = new AppwriteAuthManager();
+async function refreshJWT(getToken: GetTokenFn): Promise<void> {
+    // Si déjà en cours de refresh, attendre
+    if (refreshPromise) return refreshPromise;
+
+    refreshPromise = (async () => {
+        try {
+            const clerkToken = await getToken({ skipCache: true });
+            if (!clerkToken) throw new Error('Non connecté');
+
+            // Supprimer session existante proprement
+            try {
+                await account.deleteSession('current');
+            } catch {}
+
+            // Créer nouvelle session + JWT
+            await account.createAnonymousSession();
+            const { jwt } = await account.createJWT();
+            
+            cachedJWT = jwt;
+            jwtExpiry = Date.now() + JWT_LIFETIME;
+            client.setJWT(jwt);
+        } finally {
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
+async function ensureJWT(getToken: GetTokenFn): Promise<void> {
+    if (!isJWTValid()) {
+        await refreshJWT(getToken);
+    }
+}
 
 export async function withRetry<T>(
     operation: () => Promise<T>,
     maxRetries: number = 2,
-    getToken?: GetTokenFn,
-    userId?: string
+    getToken?: GetTokenFn
 ): Promise<T> {
-    let lastError: any;
+    if (!getToken) throw new Error('getToken required');
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    await ensureJWT(getToken);
+
+    for (let i = 0; i <= maxRetries; i++) {
         try {
             return await operation();
         } catch (error: any) {
-            lastError = error;
-            const errorMsg = String(error?.message || '').toLowerCase();
-
-            if (errorMsg.includes('rate limit') && attempt < maxRetries) {
-                const delay = Math.pow(2, attempt) * 1000;
-                await new Promise(r => setTimeout(r, delay));
+            const msg = String(error?.message || '').toLowerCase();
+            
+            if ((msg.includes('jwt') || msg.includes('expired') || msg.includes('unauthorized')) 
+                && i < maxRetries) {
+                cachedJWT = null; // Invalider cache
+                await refreshJWT(getToken);
                 continue;
             }
-
-            if ((errorMsg.includes('expired') || errorMsg.includes('unauthorized')) && attempt < maxRetries && getToken) {
-                await authManager.refreshAuth(getToken, userId);
+            
+            if (msg.includes('rate limit') && i < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
                 continue;
             }
-
-            break;
+            
+            throw error;
         }
     }
-
-    throw lastError;
+    throw new Error('Max retries');
 }
 
 export async function ensureClerkSession(getToken: GetTokenFn) {
     const token = await getToken({ skipCache: true });
     if (!token) {
+        cachedJWT = null;
+        jwtExpiry = null;
         await account.deleteSession('current').catch(() => {});
         router.replace('/(auth)/sign');
-        throw new Error('Utilisateur non identifié. Merci de vous connecter.');
+        throw new Error('Non connecté');
     }
+}
+
+export async function logoutAppwrite() {
+    await account.deleteSession('current').catch(() => {});
+    cachedJWT = null;
+    jwtExpiry = null;
+    client.setJWT('');
 }
 
 export async function initAppwriteAfterLogin(getToken: GetTokenFn, clerkUserId?: string) {
-    const token = await getToken({ skipCache: true });
-    if (!token) throw new Error('Utilisateur non connecté');
-
-    await account.deleteSession('current').catch(() => {});
-
-    try {
-        await account.get();
-    } catch {
-        await account.createAnonymousSession();
-    }
-
-    await authManager.refreshAuth(getToken, clerkUserId);
+    await ensureJWT(getToken);
 }
-
 
 export async function isProfileComplete(clerkUserId?: string | null, getToken?: GetTokenFn) {
     if (!clerkUserId || !getToken) return false;
-
     try {
         return await withRetry(async () => {
-            await authManager.ensureAuth(getToken, clerkUserId);
             const res = await databases.listDocuments(
                 appwriteConfig.databaseId,
                 appwriteConfig.userCollectionId,
@@ -191,20 +139,16 @@ export async function isProfileComplete(clerkUserId?: string | null, getToken?: 
             );
             const doc = res?.documents?.[0];
             return Boolean(doc?.name && doc?.firstname && doc?.gender && doc?.date);
-        }, 1, getToken, clerkUserId);
+        }, 1, getToken);
     } catch {
         return true;
     }
 }
 
-
 export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { clerkUserId?: string | null, email?: string | null }) => {
     return withRetry(async () => {
-        await authManager.ensureAuth(getToken, clerkUserId || undefined);
-
         let doc: any | null = null;
         
-        // Recherche par clerkUserId (prioritaire car synchronisé par le webhook)
         if (clerkUserId) {
             const res = await databases.listDocuments(
                 appwriteConfig.databaseId,
@@ -214,7 +158,6 @@ export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { c
             doc = res?.documents?.[0] ?? null;
         }
 
-        // Fallback: recherche par email si pas trouvé
         if (!doc && email) {
             const res = await databases.listDocuments(
                 appwriteConfig.databaseId,
@@ -229,11 +172,13 @@ export const findUser = async (getToken: GetTokenFn, { clerkUserId, email }: { c
             complete: doc ? await isProfileComplete(clerkUserId, getToken) : false,
             doc,
         };
-    }, 2, getToken, clerkUserId || undefined);
+    }, 2, getToken);
 };
 
-
-export const uploadImage = async (imageUri: string | null | undefined) => {
+export const uploadImage = async (
+    imageUri: string | null | undefined, 
+    getToken: GetTokenFn
+) => {
     if (!imageUri) return null;
 
     return withRetry(async () => {
@@ -254,21 +199,19 @@ export const uploadImage = async (imageUri: string | null | undefined) => {
         );
 
         return uploadedFile.$id as string;
-    });
+    }, 2, getToken); 
 };
-
-
 export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn) => {
     return withRetry(async () => {
-        await authManager.ensureAuth(getToken, params.clerkUserId);
+        if (!params.clerkUserId) throw new Error('clerkUserId requis');
 
-        // Vérifier si l'utilisateur existe déjà (synchronisé depuis Clerk)
         const { exists, doc } = await findUser(getToken, { 
             clerkUserId: params.clerkUserId, 
             email: params.email 
         });
 
-        const avatarId = await uploadImage(params.avatar ?? null);
+        // Passer getToken à uploadImage
+        const avatarId = await uploadImage(params.avatar ?? null, getToken);
 
         const userData = {
             name: params.name,
@@ -280,42 +223,26 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
             clerkUserId: params.clerkUserId,
         };
 
-        // Si l'utilisateur existe déjà (synchronisé par webhook), on met à jour
         if (exists && doc) {
-            console.log('✓ Utilisateur trouvé, mise à jour du profil...');
-            
             const updatedDoc = await databases.updateDocument(
                 appwriteConfig.databaseId,
                 appwriteConfig.userCollectionId,
                 doc.$id,
                 userData
             );
-            
             return updatedDoc.$id as string;
         }
-
-        // Sinon on crée (fallback au cas où le webhook n'a pas encore synchronisé)
-        console.log('⚠ Utilisateur non trouvé, création du profil...');
-        
-        const me = await account.get();
-        const docPerms = [
-            Permission.read(Role.user(me.$id)),
-            Permission.update(Role.user(me.$id)),
-            Permission.delete(Role.user(me.$id)),
-        ];
 
         const newDoc = await databases.createDocument(
             appwriteConfig.databaseId,
             appwriteConfig.userCollectionId,
-            ID.unique(),
-            userData,
-            docPerms
+            params.clerkUserId,
+            userData
         );
 
         return newDoc.$id as string;
-    }, 2, getToken, params.clerkUserId);
+    }, 2, getToken);
 };
-
 const buildFileViewUrl = (fileId: string) => {
     const base = appwriteConfig.endpoint.replace(/\/+$/, '');
     const { bucketId, projectId } = appwriteConfig;
@@ -327,13 +254,11 @@ export async function getImage(getToken: GetTokenFn, clerkUserId?: string | null
     const { doc } = await findUser(getToken, { clerkUserId, email: null });
     const fileId = doc?.avatarId;
     if (!fileId) return null;
-
     return { uri: buildFileViewUrl(fileId) };
 }
 
 export const getUser = async(getToken: GetTokenFn, clerkUserId?: string | null) => {
     return withRetry(async() => {
-        await authManager.ensureAuth(getToken, clerkUserId || undefined);
         if(!clerkUserId) throw new Error('clerkUserId manquant');
         const {documents} = await databases.listDocuments<UserDoc>(
             appwriteConfig.databaseId,
@@ -341,12 +266,11 @@ export const getUser = async(getToken: GetTokenFn, clerkUserId?: string | null) 
             [Query.equal('clerkUserId', clerkUserId)]
         );
         return documents?.[0] || null;
-    }, 2, getToken, clerkUserId || undefined);
+    }, 2, getToken);
 };
 
 export const updateUserInfo = async(getToken: GetTokenFn, clerkUserId?: string | null, data?: Partial<UserDoc>) => {
     return withRetry(async() => {
-        await authManager.ensureAuth(getToken, clerkUserId || undefined);
         if(!clerkUserId || !data) throw new Error('Paramètres manquants');
 
         const res = await databases.listDocuments<UserDoc>(
@@ -365,12 +289,15 @@ export const updateUserInfo = async(getToken: GetTokenFn, clerkUserId?: string |
         ) as UserDoc;
 
         return updatedUser;
-    }, 2, getToken, clerkUserId || undefined);
+    }, 2, getToken);
 };
 
-export const updateUserImage = async(getToken: GetTokenFn, clerkUserId?: string | null, imageUri?: string | null) => {
+export const updateUserImage = async(
+    getToken: GetTokenFn, 
+    clerkUserId?: string | null, 
+    imageUri?: string | null
+) => {
     return withRetry(async() => {
-        await authManager.ensureAuth(getToken, clerkUserId || undefined);
         if(!clerkUserId || !imageUri) throw new Error('Paramètres manquants');
 
         const res = await databases.listDocuments<UserDoc>(
@@ -384,7 +311,7 @@ export const updateUserImage = async(getToken: GetTokenFn, clerkUserId?: string 
         const user = res.documents[0];
         const oldAvatarId = user.avatarId;
 
-        const newAvatarId = await uploadImage(imageUri);
+        const newAvatarId = await uploadImage(imageUri, getToken);
         if(!newAvatarId) throw new Error('Échec upload image');
 
         const updatedUser = await databases.updateDocument(
@@ -395,93 +322,56 @@ export const updateUserImage = async(getToken: GetTokenFn, clerkUserId?: string 
         ) as UserDoc;
 
         if(oldAvatarId && oldAvatarId !== newAvatarId) {
-            storage.deleteFile(appwriteConfig.bucketId, oldAvatarId)
-                .then(() => console.log('✓ Ancienne image supprimée'))
-                .catch(e => console.log('⚠ Erreur suppression ancienne image:', e?.message));
+            storage.deleteFile(appwriteConfig.bucketId, oldAvatarId).catch(() => {});
         }
 
         return updatedUser;
-    }, 2, getToken, clerkUserId || undefined);
+    }, 2, getToken);
 };
-
-
 export async function deleteUserAccount(
-  getToken: () => Promise<string | null>,
-  clerkUserId?: string | null
+    getToken: GetTokenFn,
+    clerkUserId?: string | null
 ) {
-  if (!clerkUserId) throw new Error("❌ ID Clerk manquant");
+    if (!clerkUserId) throw new Error("ID Clerk manquant");
 
-  return withRetry(async () => {
-    const token = await getToken();
-    if (!token) throw new Error("Utilisateur non connecté");
+    return withRetry(async () => {
+        const res = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.userCollectionId,
+            [Query.equal("clerkUserId", clerkUserId)]
+        );
 
-    const res = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.userCollectionId,
-      [Query.equal("clerkUserId", clerkUserId)]
-    );
+        if (res.documents.length === 0) return true;
+        
+        const userDoc = res.documents[0];
 
-    if (res.documents.length === 0) {
-      console.warn("⚠ Aucun document Appwrite trouvé pour cet utilisateur");
-      return true;
-    }
-    
-    const userDoc = res.documents[0];
+        if (userDoc.avatarId) {
+            await storage.deleteFile(appwriteConfig.bucketId, userDoc.avatarId).catch(() => {});
+        }
 
-    // Supprimer l'image si elle existe
-    if (userDoc.avatarId) {
-      try {
-        await storage.deleteFile(appwriteConfig.bucketId, userDoc.avatarId);
-        console.log("🗑️ Image supprimée avec succès");
-      } catch (e: any) {
-        console.warn("⚠ Erreur suppression image:", e?.message);
-      }
-    }
+        await databases.deleteDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.userCollectionId,
+            userDoc.$id
+        );
 
-    // Supprimer le document utilisateur
-    try {
-      await databases.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.userCollectionId,
-        userDoc.$id
-      );
-      console.log("🗑️ Document utilisateur supprimé d'Appwrite");
-    } catch (e: any) {
-      console.warn("⚠ Erreur suppression document:", e?.message);
-    }
-
-    return true;
-  });
+        return true;
+    }, 2, getToken);
 }
 
-/**
- * NOUVELLE FONCTION: Attendre que le webhook Clerk synchronise l'utilisateur
- * Utile juste après l'inscription pour s'assurer que l'utilisateur est bien créé
- */
 export async function waitForUserSync(
-  getToken: GetTokenFn,
-  clerkUserId: string,
-  maxAttempts: number = 3,
-  delayMs: number = 1000
+    getToken: GetTokenFn,
+    clerkUserId: string,
+    maxAttempts: number = 10,
+    delayMs: number = 1000
 ): Promise<boolean> {
-  console.log('⏳ Attente de la synchronisation Clerk → Appwrite...');
-  
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const { exists } = await findUser(getToken, { clerkUserId, email: null });
-      
-      if (exists) {
-        console.log('✅ Utilisateur synchronisé !');
-        return true;
-      }
-      
-      console.log(`⏳ Tentative ${i + 1}/${maxAttempts}...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    } catch (error) {
-      console.warn('⚠ Erreur lors de la vérification:', error);
+    for (let i = 0; i < maxAttempts; i++) {
+        try {
+            await ensureJWT(getToken);
+            return true;
+        } catch {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
     }
-  }
-  
-  console.warn('⚠ Timeout: Utilisateur non synchronisé après', maxAttempts, 'tentatives');
-  return false;
+    return false;
 }

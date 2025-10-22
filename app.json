@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "gozemapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "com.adam.gozem",
       "supportsTablet": true,
@@ -21,7 +21,8 @@
         "backgroundColor": "#169137"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.adam.gozem"
+      "package": "com.adam.gozem",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -48,8 +49,18 @@
           "project": "gozem_app",
           "organization": "adam-4y"
         }
-      ]
+      ],
+
+      [
+      "expo-notifications",
+      {
+        "icon": "./assets/images/notification.png",
+        "color": "#169137"
+      }
+    ]
+    
     ],
+    
     "experiments": {
       "typedRoutes": true
     },

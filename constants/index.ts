@@ -69,6 +69,9 @@ import langue from '../assets/images/langue.png';
 import logout from '../assets/images/logout.png';
 import deleted from '../assets/images/delete.png';
 import del from '../assets/images/deletedroite.png';
+import francais from '../assets/images/france.png';
+import anglais from '../assets/images/anglais.png';
+import notif from '../assets/images/notif.png';
 
 
 export const footer = [
@@ -320,4 +323,7 @@ export const images ={
     langue,
     deleted,
     del,
+    francais,
+    anglais,
+    notif
 };

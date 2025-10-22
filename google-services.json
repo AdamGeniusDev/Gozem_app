@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "957275304545",
+    "project_id": "gozemapp-3bd52",
+    "storage_bucket": "gozemapp-3bd52.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957275304545:android:717abeef25dc6c5f153020",
+        "android_client_info": {
+          "package_name": "com.adam.gozem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbdQ37xQ8-fZk4k8CIXH8LxpC5NZS5JDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
