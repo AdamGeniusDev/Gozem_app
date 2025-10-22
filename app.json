@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "gozemapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.adam.gozem",
       "supportsTablet": true,
