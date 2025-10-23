@@ -72,6 +72,8 @@ import del from '../assets/images/deletedroite.png';
 import francais from '../assets/images/france.png';
 import anglais from '../assets/images/anglais.png';
 import notif from '../assets/images/notif.png';
+import disabled from '../assets/images/disabled.png';
+import treduction from '../assets/images/ticketreduction.png';
 
 
 export const footer = [
@@ -325,5 +327,7 @@ export const images ={
     del,
     francais,
     anglais,
-    notif
+    notif,
+    disabled,
+    treduction
 };

@@ -50,17 +50,15 @@
           "organization": "adam-4y"
         }
       ],
-
       [
-      "expo-notifications",
-      {
-        "icon": "./assets/images/notification.png",
-        "color": "#169137"
-      }
-    ]
-    
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification.png",
+          "color": "#169137"
+        }
+      ],
+      "expo-build-properties"
     ],
-    
     "experiments": {
       "typedRoutes": true
     },
