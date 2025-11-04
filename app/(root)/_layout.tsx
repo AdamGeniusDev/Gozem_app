@@ -22,7 +22,7 @@ export default function TabLayout() {
       if (userId && getToken) {
         try {
           const isComplete = await isProfileComplete(userId, getToken);
-          if (!isComplete) router.replace('/(auth)/info'); // Redirect correct en effet
+          if (!isComplete) router.replace('/(auth)/info'); 
         } catch (error) {
           console.error('Erreur:', error);
         }
@@ -89,11 +89,11 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="adresses"
-        options={{ title: t("layoutRoot.addresses"), tabBarIcon: ({ focused }) => <TabBarIcon title="Adresses" icon={images.adresse} focused={focused} /> }}
+        options={{ title: t("layoutRoot.addresses"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.addresses")} icon={images.adresse} focused={focused} /> }}
       />
       <Tabs.Screen
         name="activity"
-        options={{ title: t("layoutRoot.activity"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.addresses")} icon={images.activity} focused={focused} /> }}
+        options={{ title: t("layoutRoot.activity"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.activity")} icon={images.activity} focused={focused} /> }}
       />
       <Tabs.Screen
         name="compte"

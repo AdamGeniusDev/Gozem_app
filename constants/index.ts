@@ -74,6 +74,12 @@ import anglais from '../assets/images/anglais.png';
 import notif from '../assets/images/notif.png';
 import disabled from '../assets/images/disabled.png';
 import treduction from '../assets/images/ticketreduction.png';
+import parrainage from '../assets/images/parrain.png';
+import food from '../assets/images/fourchette.png';
+import favori from '../assets/images/coeur.png';
+import panierr from '../assets/images/panierf.png';
+import commande from '../assets/images/commande.png';
+import coeurp from '../assets/images/coeurp.png';
 
 
 export const footer = [
@@ -251,11 +257,13 @@ export const services = [
     "operation": [
       {
         'text': 'Restaurants',
-        'icone': resto,
+        'icone': resto,    
+         'path': '/(restaurants)/food',
     },
     {
         'text': 'Bien manger a 1000F',
         'icone': monnaie,
+         'path' : '/(restaurants)/food',
     },
   ],
     "image": repas
@@ -329,5 +337,11 @@ export const images ={
     anglais,
     notif,
     disabled,
-    treduction
+    treduction,
+    parrainage,
+    food,
+    favori,
+    panierr,
+    commande,
+    coeurp
 };

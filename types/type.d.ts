@@ -44,3 +44,47 @@ export interface UserDoc extends Models.Document {
   avatarId?: string;
   date?: string;
 };
+
+export interface GetMenu {
+  speciality: string,
+  query?: string,
+}
+
+export interface Distance {
+  lat: number,
+  lon: number,
+}
+
+export interface Speciality extends Models.Document {
+  $id: string;
+  specialityName: string;
+  specialityImage: string;
+  restaurantSpecialities: string[];
+  menu: string[];
+}
+
+export interface Restaurant extends Models.Document {
+  $id: string;
+  restaurantName: string;
+  address: string;
+  rating: number;
+  openTime: Date;
+  closeTime: Date;
+  numberOpinion: number;
+  specialities: Speciality[];
+  menu: string[];
+  restaurantLogo: string;
+  restaurantBanner: string;
+}
+
+export interface GetSpecialitiesOptions {
+  specialities?: string[],
+  limit?: number,
+  orderBy?: string,
+  numberOpinion?: true
+}
+
+export interface Coords {
+  latitude: number,
+  longitude: number,
+}

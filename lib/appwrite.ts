@@ -1,8 +1,8 @@
-import { CreateUserPrams, UserDoc } from '@/types/type';
+import { CreateUserPrams, GetMenu, GetSpecialitiesOptions, Restaurant, Speciality, UserDoc } from '@/types/type';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
-import { Account, Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
+import { Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
 
 type GetTokenFn = (opt?: { skipCache?: boolean }) => Promise<string | null>;
 
@@ -16,6 +16,12 @@ export const appwriteConfig = {
     databaseId: '68b6b82d0002ee2da596',
     bucketId: '68b807d70015bf53e8b0',
     userCollectionId: '68b80ce0001400d839ff',
+    restaurantsCollectiondId: '6901bd83002f5f5b027c',
+    menuCollectionId: '6901e9360003a290efb7',
+    supplementsCollectionId: '6901edc40025048b78d6',
+    specialitiesCollectionId: '6901bfbf001392560b0f',
+    restaurantsSpecialitiesCollectionId: '6901c11f002fe51eda14',
+    favorisCollectionId: '690894fa00051cf10b5c',
 };
 
 export const client = new Client();
@@ -24,63 +30,22 @@ client
     .setProject(appwriteConfig.projectId)
     .setPlatform(platformId);
 
-export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
-
-let cachedJWT: string | null = null;
-let jwtExpiry: number | null = null;
-let refreshPromise: Promise<void> | null = null;
-
-const JWT_LIFETIME = 10 * 60 * 1000; // 13 minutes (expire à 15, on garde 2 min de marge)
-
-function isJWTValid(): boolean {
-    return cachedJWT !== null && jwtExpiry !== null && Date.now() < jwtExpiry;
-}
-
-async function refreshJWT(getToken: GetTokenFn): Promise<void> {
-    // Si déjà en cours de refresh, attendre
-    if (refreshPromise) return refreshPromise;
-
-    refreshPromise = (async () => {
-        try {
-            const clerkToken = await getToken({ skipCache: true });
-            if (!clerkToken) throw new Error('Non connecté');
-
-            // Supprimer session existante proprement
-            try {
-                await account.deleteSession('current');
-            } catch {}
-
-            // Créer nouvelle session + JWT
-            await account.createAnonymousSession();
-            const { jwt } = await account.createJWT();
-            
-            cachedJWT = jwt;
-            jwtExpiry = Date.now() + JWT_LIFETIME;
-            client.setJWT(jwt);
-        } finally {
-            refreshPromise = null;
-        }
-    })();
-
-    return refreshPromise;
-}
-
-async function ensureJWT(getToken: GetTokenFn): Promise<void> {
-    if (!isJWTValid()) {
-        await refreshJWT(getToken);
-    }
-}
 
 export async function withRetry<T>(
     operation: () => Promise<T>,
     maxRetries: number = 2,
     getToken?: GetTokenFn
 ): Promise<T> {
-    if (!getToken) throw new Error('getToken required');
-
-    await ensureJWT(getToken);
+    
+    if (getToken) {
+        const token = await getToken({ skipCache: false });
+        if (!token) {
+            router.replace('/(auth)/sign');
+            throw new Error('Non connecté');
+        }
+    }
 
     for (let i = 0; i <= maxRetries; i++) {
         try {
@@ -88,13 +53,7 @@ export async function withRetry<T>(
         } catch (error: any) {
             const msg = String(error?.message || '').toLowerCase();
             
-            if ((msg.includes('jwt') || msg.includes('expired') || msg.includes('unauthorized')) 
-                && i < maxRetries) {
-                cachedJWT = null; // Invalider cache
-                await refreshJWT(getToken);
-                continue;
-            }
-            
+            // Retry sur rate limit
             if (msg.includes('rate limit') && i < maxRetries) {
                 await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
                 continue;
@@ -103,29 +62,24 @@ export async function withRetry<T>(
             throw error;
         }
     }
-    throw new Error('Max retries');
+    throw new Error('Max retries atteint');
 }
 
 export async function ensureClerkSession(getToken: GetTokenFn) {
     const token = await getToken({ skipCache: true });
     if (!token) {
-        cachedJWT = null;
-        jwtExpiry = null;
-        await account.deleteSession('current').catch(() => {});
         router.replace('/(auth)/sign');
         throw new Error('Non connecté');
     }
 }
 
 export async function logoutAppwrite() {
-    await account.deleteSession('current').catch(() => {});
-    cachedJWT = null;
-    jwtExpiry = null;
-    client.setJWT('');
+    // La déconnexion se fait uniquement via Clerk
 }
 
 export async function initAppwriteAfterLogin(getToken: GetTokenFn, clerkUserId?: string) {
-    await ensureJWT(getToken);
+    // Vérifier juste que l'utilisateur est connecté à Clerk
+    await ensureClerkSession(getToken);
 }
 
 export async function isProfileComplete(clerkUserId?: string | null, getToken?: GetTokenFn) {
@@ -201,6 +155,7 @@ export const uploadImage = async (
         return uploadedFile.$id as string;
     }, 2, getToken); 
 };
+
 export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn) => {
     return withRetry(async () => {
         if (!params.clerkUserId) throw new Error('clerkUserId requis');
@@ -210,7 +165,6 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
             email: params.email 
         });
 
-        // Passer getToken à uploadImage
         const avatarId = await uploadImage(params.avatar ?? null, getToken);
 
         const userData = {
@@ -243,6 +197,7 @@ export const createUsers = async (params: CreateUserPrams, getToken: GetTokenFn)
         return newDoc.$id as string;
     }, 2, getToken);
 };
+
 const buildFileViewUrl = (fileId: string) => {
     const base = appwriteConfig.endpoint.replace(/\/+$/, '');
     const { bucketId, projectId } = appwriteConfig;
@@ -328,6 +283,7 @@ export const updateUserImage = async(
         return updatedUser;
     }, 2, getToken);
 };
+
 export async function deleteUserAccount(
     getToken: GetTokenFn,
     clerkUserId?: string | null
@@ -367,11 +323,231 @@ export async function waitForUserSync(
 ): Promise<boolean> {
     for (let i = 0; i < maxAttempts; i++) {
         try {
-            await ensureJWT(getToken);
+            await ensureClerkSession(getToken);
             return true;
         } catch {
             await new Promise(resolve => setTimeout(resolve, delayMs));
         }
     }
     return false;
+}
+
+export const getMenu = async({speciality,query}: GetMenu) =>{
+
+    try{
+
+  
+    const queries: string[] = [];
+
+    if(speciality) queries.push(Query.equal('specialityId',speciality));
+    if(query) queries.push(Query.search('menuName',query));
+
+    const menu = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.menuCollectionId,
+        queries
+    )
+
+    return menu.documents;
+
+    }catch(e){
+        throw new Error(e as string)
+    }
+
+}
+
+export const getSpecialities = async(): Promise<Speciality[]> => {
+        try{
+            
+            const specialities = await databases.listDocuments(
+                appwriteConfig.databaseId,
+                appwriteConfig.specialitiesCollectionId,
+            )
+            return specialities.documents as unknown as Speciality[];
+        }catch(e){
+            throw new Error(e as string)    
+        }
+}
+
+const enrichRestaurantWithSpecialities = async (restaurant: Restaurant): Promise<Restaurant> => {
+    const specialitiesLink = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.restaurantsSpecialitiesCollectionId,
+        [Query.equal('restaurantId', restaurant.$id)]
+    );
+
+    const specialities = await Promise.all(
+        specialitiesLink.documents.map(async (link) =>
+            databases.getDocument<Speciality>(
+                appwriteConfig.databaseId,
+                appwriteConfig.specialitiesCollectionId,
+                link.specialityId
+            )
+        )
+    );
+
+    return {
+        ...restaurant,
+        specialities
+    } as unknown as Restaurant;
+};
+
+export const getRestaurants = async(options?: GetSpecialitiesOptions) : Promise<Restaurant[]> => {
+    try{
+         const queries: string[] = [];
+
+            if(options?.specialities && options.specialities.length > 0){
+                    queries.push(Query.contains('restaurantSpecialities',options.specialities))
+            }
+
+            if(options?.limit){
+                queries.push(Query.limit(options.limit))
+            }
+
+            if(options?.orderBy){
+                queries.push(Query.orderAsc(options.orderBy))
+            }
+            if(options?.numberOpinion){
+                queries.push(Query.orderDesc('numberOpinion'))
+                queries.push(Query.limit(1))
+            }
+        const restaurantsData = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.restaurantsCollectiondId,
+            queries
+        );
+        const restaurants = await Promise.all(
+            restaurantsData.documents.map(async (restaurant) => {
+                return enrichRestaurantWithSpecialities(restaurant as unknown as Restaurant);
+            })
+        );
+        return restaurants as unknown as Restaurant[];
+    } catch(e){
+        throw new Error(e as string);
+    }
+}
+
+export const getRestaurantsBySpeciality = async(specialityId: string): Promise<Restaurant[]> => {
+
+    try{
+        const pivotDocs = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.restaurantsSpecialitiesCollectionId,
+            [Query.equal('specialityId',specialityId)]
+        );
+
+        const restaurants = await Promise.all(
+            pivotDocs.documents.map(async(doc) => {
+                const restaurant = await databases.getDocument<Restaurant>(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.restaurantsCollectiondId,
+                    doc.restaurantId
+                    
+                );
+
+                const specialitiesLink = await databases.listDocuments(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.restaurantsSpecialitiesCollectionId,
+                    [Query.equal('restaurantId',doc.restaurantId)]
+                );
+
+                const specialities = await Promise.all(
+                    specialitiesLink.documents.map(async(link)=>
+                    databases.getDocument<Speciality>(
+                        appwriteConfig.databaseId,
+                        appwriteConfig.specialitiesCollectionId,
+                        link.specialityId
+                    ))
+                );
+                return {
+                    ...restaurant,specialities
+                }
+            })
+        );
+
+        restaurants.sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+        
+        return restaurants as unknown as Restaurant[];
+    } catch(e){
+        throw new Error(e as string);
+    }
+
+}
+
+export const addFavori = async ({userId,restaurantId}: {userId: string,restaurantId: string}) => {
+        return await databases.createDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.favorisCollectionId,
+            ID.unique(),
+            {userId,restaurantId}
+        );
+}
+
+export const getFavori = async ({ userId, restaurantId }: { userId: string, restaurantId: string }) => {
+    const res = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.favorisCollectionId,
+        [
+            Query.equal('userId', userId),
+            Query.equal('restaurantId', restaurantId)
+        ]
+    );
+    return res.documents[0];
+}
+
+
+
+
+export const DeleteFavori = async(favoriteId: string) => {
+    return await databases.deleteDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.favorisCollectionId,
+        favoriteId
+    )
+}
+
+export const getUserAllFavori = async(userId: string) : Promise<Restaurant[]> => {
+    try {
+        const Favoris = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.favorisCollectionId,
+            [Query.equal('userId', userId)]
+        );
+
+        const userRestaurantsFavoris = await Promise.all(
+            Favoris.documents.map(async (favori) => {
+                const restaurantFavori = await databases.getDocument<Restaurant>(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.restaurantsCollectiondId,
+                    favori.restaurantId
+                );
+
+                const specialitiesLink = await databases.listDocuments(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.restaurantsSpecialitiesCollectionId,
+                    [Query.equal('restaurantId', favori.restaurantId)]
+                );
+
+                const specialities = await Promise.all(
+                    specialitiesLink.documents.map(async(link) =>
+                        databases.getDocument<Speciality>(
+                            appwriteConfig.databaseId,
+                            appwriteConfig.specialitiesCollectionId,
+                            link.specialityId
+                        )
+                    )
+                );
+
+                return {
+                    ...restaurantFavori,
+                    specialities
+                };
+            })
+        );
+
+        return userRestaurantsFavoris as unknown as Restaurant[];
+
+    } catch(e) {
+        throw new Error(e as string);
+    }
 }
