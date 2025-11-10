@@ -1,21 +1,14 @@
 {
-  "name": "gozem_app",
-  "main": "expo-router/entry",
+  "name": "starter-template",
   "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "type": "module",
   "scripts": {
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "lint": "expo lint"
-  },
-  "overrides": {
-    "expo-file-system": "~19.0.15",
-    "react-native-safe-area-context": "~5.6.0",
-    "yaml": "^2.8.1"
+    "format": "prettier --write ."
   },
   "dependencies": {
+<<<<<<< HEAD
     "@clerk/clerk-expo": "^2.14.25",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
@@ -85,14 +78,11 @@
     "react-native-worklets": "0.5.1",
     "tailwindcss": "^3.4.17",
     "zustand": "^5.0.8"
+=======
+    "node-appwrite": "^14.1.0"
+>>>>>>> ed7cf8d7ad5d7c902e14b9bedf64844ec829e653
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@types/react": "~19.1.10",
-    "@types/react-native-tab-view": "^1.0.6",
-    "eslint": "^9.25.0",
-    "eslint-config-expo": "~10.0.0",
-    "typescript": "~5.9.2"
-  },
-  "private": true
+    "prettier": "^3.2.5"
+  }
 }
