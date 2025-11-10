@@ -5,6 +5,8 @@ import { isProfileComplete } from '@/lib/appwrite';
 import { Image, ImageSourcePropType, Text, View, Pressable } from 'react-native';
 import { images } from '@/constants';
 import { useTranslation } from 'react-i18next';
+import { useUserStore } from '@/store/user.store';
+import { useFavorisStore } from '@/store/favoris.store';
 
 interface TabBarIconProps {
   icon: ImageSourcePropType;
@@ -16,6 +18,16 @@ export default function TabLayout() {
 
   const {t} = useTranslation();
   const { isSignedIn, getToken, userId } = useAuth();
+  const user = useUserStore(state => state.user);
+  const { loadFavoris, clearFavoris } = useFavorisStore();
+
+   useEffect(() => {
+    if (user?.$id) {
+      loadFavoris(user.$id);
+    } else {
+      clearFavoris();
+    }
+  }, [user?.$id, loadFavoris, clearFavoris]);
 
   useEffect(() => {
     const checkProfile = async () => {

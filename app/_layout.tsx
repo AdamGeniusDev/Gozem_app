@@ -13,6 +13,7 @@ import { loaders } from '@/constants';
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/i18n/index';
+import { useCartInitialization } from "@/hooks/useCartInitialization";
 
 Sentry.init({
   dsn: 'https://2ed88e3bf6e402259453c5e5c0330312@o4509044325744640.ingest.de.sentry.io/4509982614814800',
@@ -31,6 +32,8 @@ Sentry.init({
 });
 
 export default Sentry.wrap(function RootLayout() {
+
+  useCartInitialization();
 
   SplashScreen.preventAutoHideAsync().catch(()=>{})
 

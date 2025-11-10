@@ -44,6 +44,7 @@ type Auth ={
   getPassword: (password:string) => void
   getInfo: ({name,firstname,gender,date,avatar}:{name:string,firstname:string,gender:string,date:Date,avatar:string|null}) => void
   logout: ()=> Promise<void>
+  resetPersistedStore: ()=> Promise<void>
 
   finalizeCreation: ({getToken,clerkUserId}:{getToken: GetTokenFn, clerkUserId: string}) =>Promise<string>
   activateSessionAndPassword: ({setActive,finalizeSignUp}:{setActive:SetActiveFn,finalizeSignUp: FinalizeSignUpFn})=> Promise<{sessionId: string,userId:string}>
@@ -252,7 +253,34 @@ activateSessionAndPassword: async ({
           }catch(error:any){
             console.log('Error logout',error)
           }
-        }
+        },
+        resetPersistedStore: async () => {
+          try {
+            await AsyncStorage.removeItem('auth-store');
+
+            await AsyncStorage.clear();
+
+        
+            set({
+              email: '',
+              password: '',
+              name: '',
+              firstname: '',
+              gender: '',
+              date: new Date(),
+              avatar: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: undefined,
+              pendingSessionId: null,
+              pendingUserId: null,
+              clerkUserId: null,
+            });
+          } catch (err) {
+            console.log('Erreur de reset du store:', err);
+          }
+        },
+
     }),
     {
       name: 'auth-store',

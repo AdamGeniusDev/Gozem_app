@@ -16,6 +16,7 @@ interface UserState {
   updateUser: (getToken: GetTokenFn, clerkUserId: string, data: Partial<UserDoc>) => Promise<void>;
   updateAvatar: (getToken: GetTokenFn, clerkUserId: string, imageUri: string) => Promise<void>;
   clearUser: () => void;
+  resetStore: () => void;
   setError: (error: string | null) => void;
 }
 
@@ -96,6 +97,15 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   // Réinitialiser l'état
   clearUser: () => {
+    set({
+      user: null,
+      avatar: null,
+      isLoading: false,
+      error: null,
+    });
+  },
+
+   resetStore: () => {
     set({
       user: null,
       avatar: null,

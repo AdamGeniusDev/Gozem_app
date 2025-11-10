@@ -1,10 +1,10 @@
 import { View, Text, Pressable, ActivityIndicator, Image } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams,useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '@/constants';
 import useAppwrite from '@/lib/useAppwrite';
 import { Restaurant } from '@/types/type';
-import { DeleteFavori, getFavori, getRestaurantsBySpeciality } from '@/lib/appwrite';
+import { getRestaurantsBySpeciality } from '@/lib/appwrite';
 import { FlatList } from 'react-native-gesture-handler';
 import RestaurantCard from '@/components/RestaurantCard';
 import { useCallback, useRef, useState } from 'react';
@@ -12,6 +12,7 @@ import  { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom
 
 import CustomButton from '@/components/CustomButton';
 import { useUserStore } from '@/store/user.store';
+import { useFavorisStore } from '@/store/favoris.store';
 
 const Speciality = () => {
 
@@ -22,33 +23,44 @@ const Speciality = () => {
   const modalPendingRemoveItem = useRef<BottomSheetModal>(null);
   const [pendingRemoveItem,setPendingRemoveItem] = useState<Restaurant | null>(null);
   const user = useUserStore(state => state.user);
-  const [removedFavoris, setRemovedFavoris] = useState<string[]>([]);
-
+  const { loadFavoris, removeFavori } = useFavorisStore();  
 
   const handleChangeFavori = async(action: 'added' | 'removeRequest', item?: Restaurant) =>{
-    if(action === 'added' && item){
-      setModalAddedVisible(true);
-      setAddedItem(item);
-      setTimeout(() => (setModalAddedVisible(false),setAddedItem(null)),2000)
-    } else if( action === 'removeRequest' && item){
-      modalPendingRemoveItem.current?.present()
-      setPendingRemoveItem(item);
+       if(action === 'added' && item){
+         setModalAddedVisible(true);
+         setAddedItem(item);
+
+         setTimeout(() => (setModalAddedVisible(false),setAddedItem(null)),2000)
+       } else if( action === 'removeRequest' && item){
+         modalPendingRemoveItem.current?.present()
+         setPendingRemoveItem(item);
+       }
+     }
+
+     useFocusEffect(
+         useCallback(() => {
+           if (user?.$id) {
+             loadFavoris(user.$id);
+           }
+         }, [user?.$id, loadFavoris])
+       );
+
+  const confirmRemovedFavori = useCallback(async () => {
+    if (!pendingRemoveItem || !user) return;
+
+    try {
+      await removeFavori(user.$id, pendingRemoveItem.$id);
+      
+      modalPendingRemoveItem.current?.dismiss();
+      setModalDeleteVisible(true);
+      setTimeout(() => {
+        setModalDeleteVisible(false);
+        setPendingRemoveItem(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Erreur suppression favori:', error);
     }
-  }
-  const confirmRemovedFavori = async ()=> {
-
-    if(!pendingRemoveItem || !user) return;
-
-    const favori = await getFavori({userId: user?.$id, restaurantId: pendingRemoveItem?.$id});
-
-    if(favori) await DeleteFavori(favori.$id);
-
-    modalPendingRemoveItem.current?.dismiss();
-    setRemovedFavoris(prev => [...prev, pendingRemoveItem.$id]);
-    setModalDeleteVisible(true);
-    setTimeout(() => (setModalDeleteVisible(false),setPendingRemoveItem(null)),2000);
-
-  }
+  }, [pendingRemoveItem, user, removeFavori]);
 
   const { data: restaurants, loading} = useAppwrite<Restaurant[]>({
     fn: () => getRestaurantsBySpeciality(id as string)
@@ -111,7 +123,7 @@ const Speciality = () => {
               </View>
             );
           }}
-          renderItem={({ item }) => <RestaurantCard item ={item} onFavoriChange={handleChangeFavori} removedFavoris={removedFavoris} />}
+          renderItem={({ item }) => <RestaurantCard item ={item} onFavoriChange={handleChangeFavori}/>}
         />
       </View>
       {modalAddedVisible && (

@@ -1,8 +1,8 @@
-import { CreateUserPrams, GetMenu, GetSpecialitiesOptions, Restaurant, Speciality, UserDoc } from '@/types/type';
+import { CreateUserPrams, GetSpecialitiesOptions, Menu, Restaurant, Speciality, Supplement, UserDoc } from '@/types/type';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
-import { Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
+import { Account, Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
 
 type GetTokenFn = (opt?: { skipCache?: boolean }) => Promise<string | null>;
 
@@ -32,6 +32,7 @@ client
 
 export const databases = new Databases(client);
 export const storage = new Storage(client);
+export const account = new Account(client);
 
 export async function withRetry<T>(
     operation: () => Promise<T>,
@@ -332,29 +333,59 @@ export async function waitForUserSync(
     return false;
 }
 
-export const getMenu = async({speciality,query}: GetMenu) =>{
-
-    try{
-
-  
-    const queries: string[] = [];
-
-    if(speciality) queries.push(Query.equal('specialityId',speciality));
-    if(query) queries.push(Query.search('menuName',query));
-
-    const menu = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.menuCollectionId,
-        queries
-    )
-
-    return menu.documents;
-
-    }catch(e){
-        throw new Error(e as string)
+export const getMenuSearched = async(restaurantId: string, query?: string): Promise<Menu[]> => {
+  try {
+    if (!restaurantId) {
+      throw new Error('restaurantId est requis');
     }
 
-}
+    const queries: string[] = [Query.equal('restaurantId', restaurantId)];
+    
+    if (query && query.trim()) {
+      queries.push(Query.search('menuName', query.trim()));
+    }
+
+    const menus = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.menuCollectionId,
+      queries
+    );
+
+    return menus.documents as unknown as Menu[];
+  } catch (e) {
+    console.error('Erreur getMenuSearched:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
+
+export const getMenu = async(menuId: string): Promise<Menu> => {
+  try {
+    if (!menuId) {
+      throw new Error('menuId est requis');
+    }
+
+    const menu = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.menuCollectionId,
+      menuId
+    );
+
+    const supplementsResult = await databases.listDocuments<Supplement>(
+      appwriteConfig.databaseId,
+      appwriteConfig.supplementsCollectionId,
+      [Query.equal('menuId', menuId)]
+    );
+
+    return {
+      ...menu,
+      supplements: supplementsResult.documents
+    } as unknown as Menu;
+
+  } catch (e) {
+    console.error('Erreur getMenu:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
 
 export const getSpecialities = async(): Promise<Speciality[]> => {
         try{
@@ -370,27 +401,49 @@ export const getSpecialities = async(): Promise<Speciality[]> => {
 }
 
 const enrichRestaurantWithSpecialities = async (restaurant: Restaurant): Promise<Restaurant> => {
+  try {
     const specialitiesLink = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.restaurantsSpecialitiesCollectionId,
-        [Query.equal('restaurantId', restaurant.$id)]
+      appwriteConfig.databaseId,
+      appwriteConfig.restaurantsSpecialitiesCollectionId,
+      [Query.equal('restaurantId', restaurant.$id)]
     );
 
+    if (specialitiesLink.documents.length === 0) {
+      return {
+        ...restaurant,
+        specialities: []
+      } as unknown as Restaurant;
+    }
+
     const specialities = await Promise.all(
-        specialitiesLink.documents.map(async (link) =>
-            databases.getDocument<Speciality>(
-                appwriteConfig.databaseId,
-                appwriteConfig.specialitiesCollectionId,
-                link.specialityId
-            )
-        )
+      specialitiesLink.documents.map(async (link) => {
+        try {
+          return await databases.getDocument<Speciality>(
+            appwriteConfig.databaseId,
+            appwriteConfig.specialitiesCollectionId,
+            link.specialityId
+          );
+        } catch (err) {
+          console.error(`Erreur récupération spécialité ${link.specialityId}:`, err);
+          return null;
+        }
+      })
     );
 
     return {
-        ...restaurant,
-        specialities
+      ...restaurant,
+      specialities: specialities.filter(Boolean)
     } as unknown as Restaurant;
+  } catch (e) {
+    console.error('Erreur enrichRestaurantWithSpecialities:', e);
+    // Retourner le restaurant sans spécialités en cas d'erreur
+    return {
+      ...restaurant,
+      specialities: []
+    } as unknown as Restaurant;
+  }
 };
+
 
 export const getRestaurants = async(options?: GetSpecialitiesOptions) : Promise<Restaurant[]> => {
     try{
@@ -411,6 +464,10 @@ export const getRestaurants = async(options?: GetSpecialitiesOptions) : Promise<
                 queries.push(Query.orderDesc('numberOpinion'))
                 queries.push(Query.limit(1))
             }
+
+            if(options?.sponsored){
+                queries.push(Query.equal('sponsored','yes'))
+            }
         const restaurantsData = await databases.listDocuments(
             appwriteConfig.databaseId,
             appwriteConfig.restaurantsCollectiondId,
@@ -427,6 +484,29 @@ export const getRestaurants = async(options?: GetSpecialitiesOptions) : Promise<
     }
 }
 
+export const getRestaurantInformations = async(restaurantId: string): Promise<Restaurant> => {
+  try {
+    if (!restaurantId) {
+      throw new Error('restaurantId est requis');
+    }
+
+    const restaurant = await databases.getDocument<Restaurant>(
+      appwriteConfig.databaseId,
+      appwriteConfig.restaurantsCollectiondId,
+      restaurantId  
+    );
+
+    const restaurantWithSpecialities = await enrichRestaurantWithSpecialities(
+      restaurant as unknown as Restaurant
+    );
+
+    return restaurantWithSpecialities;
+
+  } catch (e) {
+    console.error('Erreur getRestaurantInformations:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
 export const getRestaurantsBySpeciality = async(specialityId: string): Promise<Restaurant[]> => {
 
     try{
@@ -474,14 +554,37 @@ export const getRestaurantsBySpeciality = async(specialityId: string): Promise<R
 
 }
 
-export const addFavori = async ({userId,restaurantId}: {userId: string,restaurantId: string}) => {
-        return await databases.createDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.favorisCollectionId,
-            ID.unique(),
-            {userId,restaurantId}
-        );
-}
+export const addFavori = async ({userId, restaurantId}: {userId: string, restaurantId: string}) => {
+  try {
+    if (!userId || !restaurantId) {
+      throw new Error('userId et restaurantId sont requis');
+    }
+
+    // Vérifier si le favori existe déjà
+    const existing = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.favorisCollectionId,
+      [
+        Query.equal('userId', userId),
+        Query.equal('restaurantId', restaurantId)
+      ]
+    );
+
+    if (existing.documents.length > 0) {
+      return existing.documents[0];
+    }
+
+    return await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.favorisCollectionId,
+      ID.unique(),
+      {userId, restaurantId}
+    );
+  } catch (e) {
+    console.error('Erreur addFavori:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
 
 export const getFavori = async ({ userId, restaurantId }: { userId: string, restaurantId: string }) => {
     const res = await databases.listDocuments(
@@ -499,55 +602,193 @@ export const getFavori = async ({ userId, restaurantId }: { userId: string, rest
 
 
 export const DeleteFavori = async(favoriteId: string) => {
-    return await databases.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.favorisCollectionId,
-        favoriteId
-    )
-}
-
-export const getUserAllFavori = async(userId: string) : Promise<Restaurant[]> => {
-    try {
-        const Favoris = await databases.listDocuments(
-            appwriteConfig.databaseId,
-            appwriteConfig.favorisCollectionId,
-            [Query.equal('userId', userId)]
-        );
-
-        const userRestaurantsFavoris = await Promise.all(
-            Favoris.documents.map(async (favori) => {
-                const restaurantFavori = await databases.getDocument<Restaurant>(
-                    appwriteConfig.databaseId,
-                    appwriteConfig.restaurantsCollectiondId,
-                    favori.restaurantId
-                );
-
-                const specialitiesLink = await databases.listDocuments(
-                    appwriteConfig.databaseId,
-                    appwriteConfig.restaurantsSpecialitiesCollectionId,
-                    [Query.equal('restaurantId', favori.restaurantId)]
-                );
-
-                const specialities = await Promise.all(
-                    specialitiesLink.documents.map(async(link) =>
-                        databases.getDocument<Speciality>(
-                            appwriteConfig.databaseId,
-                            appwriteConfig.specialitiesCollectionId,
-                            link.specialityId
-                        )
-                    )
-                );
-
-                return {
-                    ...restaurantFavori,
-                    specialities
-                };
-            })
-        );
-
-        return userRestaurantsFavoris as unknown as Restaurant[];
-
-    } catch(e) {
-        throw new Error(e as string);
+  try {
+    if (!favoriteId) {
+      throw new Error('favoriteId est requis');
     }
-}
+
+    return await databases.deleteDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.favorisCollectionId,
+      favoriteId
+    );
+  } catch (e) {
+    console.error('Erreur DeleteFavori:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
+
+
+export const getUserAllFavori = async(userId: string): Promise<Restaurant[]> => {
+  try {
+    if (!userId) {
+      throw new Error('userId est requis');
+    }
+
+    const favoris = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.favorisCollectionId,
+      [Query.equal('userId', userId)]
+    );
+
+    if (favoris.documents.length === 0) {
+      return [];
+    }
+
+    const userRestaurantsFavoris = await Promise.all(
+      favoris.documents.map(async (favori) => {
+        try {
+          const restaurantFavori = await databases.getDocument<Restaurant>(
+            appwriteConfig.databaseId,
+            appwriteConfig.restaurantsCollectiondId,
+            favori.restaurantId
+          );
+
+          const restaurantWithSpecialities = await enrichRestaurantWithSpecialities(
+            restaurantFavori as unknown as Restaurant
+          );
+
+          return restaurantWithSpecialities;
+        } catch (err) {
+          console.error(`Erreur récupération favori ${favori.restaurantId}:`, err);
+          return null;
+        }
+      })
+    );
+
+    return userRestaurantsFavoris.filter(Boolean) as Restaurant[];
+
+  } catch (e) {
+    console.error('Erreur getUserAllFavori:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
+
+export const getMenuLowPrice = async(restaurant: string): Promise<Menu | null> => {
+  try {
+    if (!restaurant) {
+      throw new Error('restaurantId est requis');
+    }
+
+    const menu = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.menuCollectionId,
+      [
+        Query.equal('restaurantId', restaurant),
+        Query.orderAsc('normalPrice'),
+        Query.limit(1)
+      ]
+    );
+
+    return menu.documents[0] ? (menu.documents[0] as unknown as Menu) : null;
+
+  } catch (e) {
+    console.error('Erreur getMenuLowPrice:', e);
+    return null; // Retourner null au lieu de throw
+  }
+};
+
+export const getMenuSpecialities = async(
+  restaurant: string, 
+  speciality: string
+): Promise<Menu[]> => {
+  try {
+    const allMenu = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.menuCollectionId,
+      [
+        Query.equal('restaurantId', restaurant),
+        Query.equal('specialityId', speciality)
+      ]
+    );
+
+    const menusWithSupplements = await Promise.all(
+      allMenu.documents.map(async (doc) => {
+        const menu = await databases.getDocument<Menu>(
+          appwriteConfig.databaseId,
+          appwriteConfig.menuCollectionId,
+          doc.$id
+        );
+
+        const supplementsResponse = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.supplementsCollectionId,
+          [Query.equal('menuId', doc.$id)]
+        );
+
+        return {
+          ...menu,
+          supplements: supplementsResponse.documents as unknown as Supplement[]
+        } as Menu;
+      })
+    );
+
+    return menusWithSupplements;
+
+  } catch (e) {
+    console.error('Error fetching menu specialities:', e);
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
+
+export const getMenuAndRestaurants = async (query?: string) => {
+  if (!query || !query.trim()) return { restaurants: [], menus: [] };
+
+  try {
+    // 1. Rechercher les restaurants
+    const restaurantRes = await databases.listDocuments<Restaurant>(
+      appwriteConfig.databaseId,
+      appwriteConfig.restaurantsCollectiondId,
+      [Query.search("restaurantName", query)]
+    );
+    const restaurants = restaurantRes.documents;
+
+    // 2. Rechercher les menus
+    const menuRes = await databases.listDocuments<Menu>(
+      appwriteConfig.databaseId,
+      appwriteConfig.menuCollectionId,
+      [
+        Query.or([
+          Query.search("menuName", query),
+          Query.search("description", query),
+        ]),
+      ]
+    );
+    const menus = menuRes.documents;
+
+    // 3. Si pas de restaurants mais des menus, récupérer les restaurants liés
+    let relatedRestaurants: Restaurant[] = [];
+    if (restaurants.length === 0 && menus.length > 0) {
+      const restaurantIds = [
+        ...new Set(menus.map((m) => m.restaurantId)), 
+      ];
+
+      // ✅ CORRECTION: Récupérer chaque restaurant individuellement
+      const relatedRes = await Promise.all(
+        restaurantIds.map(async (id) => {
+          try {
+            const restaurant = await databases.getDocument<Restaurant>(
+              appwriteConfig.databaseId,
+              appwriteConfig.restaurantsCollectiondId,
+              id
+            );
+            return restaurant;
+          } catch (err) {
+            console.error(`Erreur récupération restaurant ${id}:`, err);
+            return null;
+          }
+        })
+      );
+
+      relatedRestaurants = relatedRes.filter(Boolean) as Restaurant[];
+    }
+
+    return {
+      restaurants: restaurants.length > 0 ? restaurants : relatedRestaurants,
+      menus,
+    };
+  } catch (e) {
+    console.error("Erreur recherche:", e);
+    throw new Error("Erreur lors de la recherche");
+  }
+};

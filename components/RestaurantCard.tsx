@@ -4,24 +4,29 @@ import { Coords, Restaurant } from '@/types/type'
 import { CalculateDelaiFromDistance, CalculateDistance, CalculatePriceFromDistance } from '@/lib/map'
 import { images } from '@/constants'
 import useLocationStore from '@/store/location.store'
-import { addFavori, getFavori } from '@/lib/appwrite'
 import { useUserStore } from '@/store/user.store'
+import { useFavorisStore } from '@/store/favoris.store'
 import { isRestaurantOpen, getTimeFromDate } from '@/lib/utils'
+import { router } from 'expo-router'
 
 type Props = {
   item: Restaurant;
   onFavoriChange?: (action: 'added' | 'removeRequest', item?: Restaurant) => void;
-  removedFavoris?: string[];
   best?: boolean
 }
 
-const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) => {
+const RestaurantCard = ({ item, onFavoriChange, best }: Props) => {
     const { convertAddress } = useLocationStore();
     const user = useUserStore(state => state.user);
-
+    
+    
+    const isFavoriInStore = useFavorisStore(
+        useCallback((state) => state.isFavori(item.$id), [item.$id])
+    );
+    const addFavori = useFavorisStore(state => state.addFavori);
+    
     const [coords, setCoords] = useState<Coords | null>(null);
     const [distance, setDistance] = useState<number>(0);
-    const [favoris, setFavoris] = useState(false);
     const [loadingFavori, setLoadingFavori] = useState(false);
 
     const restaurantStatus = useMemo(() => {
@@ -50,21 +55,19 @@ const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) =>
         setLoadingFavori(true);
 
         try {
-            const favori = await getFavori({ userId: user.$id, restaurantId: item.$id });
-
-            if (favori) {
+            if (isFavoriInStore) {
                 onFavoriChange?.('removeRequest', item);
             } else {
-                await addFavori({ userId: user.$id, restaurantId: item.$id });
-                setFavoris(true);
+                await addFavori(user.$id, item.$id);
                 onFavoriChange?.('added', item);
             }
         } catch (error) {
             console.error('Erreur toggle favori:', error);
+            alert('Une erreur est survenue');
         } finally {
             setLoadingFavori(false);
         }
-    }, [user, item, loadingFavori, onFavoriChange]);
+    }, [user, item, loadingFavori, isFavoriInStore, addFavori, onFavoriChange]);
 
     const specialityText = useMemo(() => {
         const specialities = Array.isArray(item.specialities) ? item.specialities : [];
@@ -96,25 +99,6 @@ const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) =>
         };
     }, [item.address, convertAddress]);
 
-    useEffect(() => {
-        const checkFavori = async () => {
-            if (!user) return;
-            try {
-                const favori = await getFavori({ userId: user.$id, restaurantId: item.$id });
-                setFavoris(!!favori);
-            } catch (error) {
-                console.error('Erreur check favori:', error);
-            }
-        };
-        checkFavori();
-    }, [user, item.$id]);
-
-    useEffect(() => {
-        if (removedFavoris?.includes(item.$id)) {
-            setFavoris(false);
-        }
-    }, [removedFavoris, item.$id]);
-
     const deliveryInfo = useMemo(() => {
         const price = CalculatePriceFromDistance({ distance });
         const delai = CalculateDelaiFromDistance({ distance });
@@ -141,10 +125,11 @@ const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) =>
     }, [deliveryInfo.isHorsPortee, restaurantStatus]);
 
     return (
-        <View
+        <Pressable
             pointerEvents="box-none"
             style={{ height: 250, overflow: 'hidden', elevation: 4 }}
             className='bg-white rounded-lg'
+            onPress={() => router.push(`/RestaurantDetails/${item.$id}`)}
         >
             <Pressable
                 onPress={toggleFavoris}
@@ -153,7 +138,7 @@ const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) =>
                 style={{ height: 45, width: 45, zIndex: 200, top: 5, right: 5 }}
                 disabled={loadingFavori}
             >
-                {!favoris ? (
+                {!isFavoriInStore ? (
                     <Image source={images.favori} style={{ width: '50%', height: '50%' }} resizeMode='contain' />
                 ) : (
                     <Image source={images.coeurp} style={{ width: '50%', height: '50%', tintColor: '#ef4444' }} resizeMode='contain' />
@@ -228,27 +213,26 @@ const RestaurantCard = ({ item, onFavoriChange, removedFavoris,best }: Props) =>
                             <Text className='font-poppins-bold text-neutral-700'> ({item.numberOpinion})</Text>
                         </View>
                     )}
-                    {!overlayContent.show && (
+                    
                         <Text className='font-regular text-[13px] text-neutral-500' style={{ paddingBottom: 3 }}>
                             • Livraison : <Text className='font-poppins-bold text-black text-[15px]'>{deliveryInfo.price} F</Text>
                         </Text>
-                    )}
+                   
                 </View>
                 {!!specialityText && (
                     <View className='flex-row gap-x-2 items-center'>
                         {best && <Text className='font-poppins-bold text-primary-300 text-[15px]'>Best</Text>}
-                         <Text
-                        numberOfLines={1}
-                        ellipsizeMode='tail'
-                        className='self-start bg-neutral-100 px-2 py-[2px] rounded-full text-neutral-500 font-regular text-[12px]'
+                        <Text
+                            numberOfLines={1}
+                            ellipsizeMode='tail'
+                            className='self-start bg-neutral-100 px-2 py-[2px] rounded-full text-neutral-500 font-regular text-[12px]'
                         >
-                        {specialityText}
-                    </Text>
-                    </View>        
-                   
+                            {specialityText}
+                        </Text>
+                    </View>
                 )}
             </View>
-        </View>
+        </Pressable>
     )
 }
 

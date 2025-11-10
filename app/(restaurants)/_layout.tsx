@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Image, ImageSourcePropType, Text, View, Pressable } from 'react-native';
 import { images } from '@/constants';
+import { UseCartStore } from '@/store/cart.store';
 
 
 interface TabBarIconProps {
@@ -14,11 +15,28 @@ export default function TabLayout() {
 
   const { isSignedIn} = useAuth();
 
+  const count = UseCartStore(state => state.getCartCount());
+
 
   if (!isSignedIn) return <Redirect href='/(auth)/welcome'/>;
 
   const TabBarIcon = ({ focused, title, icon }: TabBarIconProps) => (
-    <View className="h-full items-center justify-center gap-1 px-1 mt-3">
+    <View className="h-full relative items-center justify-center gap-1 px-1 mt-3">
+      {count > 0 && title === 'Panier' && (
+        <View className='bg-red-800 absolute items-center justify-center' style={{position: 'absolute',
+          top: -12,
+          right: -3,
+          backgroundColor: 'red',
+          width: 15,
+          height: 15,
+          borderRadius: 9,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 20,
+          elevation: 6,}}>
+        <Text className='font-semibold text-[10px] text-white '>{count}</Text>
+        </View>
+      )}
       <Image
         source={icon}
         className="size-7"
@@ -45,7 +63,7 @@ export default function TabLayout() {
           borderTopWidth: 0,
           paddingTop: 8,
           paddingBottom: 10,
-          elevation: 5,
+          elevation: 4,
         },
 
         // ↓ Opacité plus légère au press (et ripple Android)

@@ -1,7 +1,7 @@
 import { View, Text, ActivityIndicator, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import useAppwrite from '@/lib/useAppwrite'
-import { DeleteFavori, getFavori, getUserAllFavori } from '@/lib/appwrite'
+import { getUserAllFavori } from '@/lib/appwrite'
 import { useUserStore } from '@/store/user.store'
 import { Restaurant } from '@/types/type'
 import { FlatList } from 'react-native-gesture-handler'
@@ -11,20 +11,21 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/
 import CustomButton from '@/components/CustomButton'
 import { images } from '@/constants'
 import { useFocusEffect } from 'expo-router'
+import { useFavorisStore } from '@/store/favoris.store'
 
 const Favoris = () => {
 
    const user = useUserStore(state => state.user);
+   const { loadFavoris, removeFavori } = useFavorisStore();
    const [modalAddedVisible,setModalAddedVisible] = useState(false);
     const [modalDeleteVisible,setModalDeleteVisible] = useState(false);
     const [addedItem,setAddedItem] = useState<Restaurant | null>(null);
     const modalPendingRemoveItem = useRef<BottomSheetModal>(null);
     const [pendingRemoveItem,setPendingRemoveItem] = useState<Restaurant | null>(null);
-    const [removedFavoris, setRemovedFavoris] = useState<string[]>([]);
 
     const {data: restaurants,loading ,refetch} = useAppwrite<Restaurant[]> ({
       fn: () => getUserAllFavori(user.$id as string),
-      skip: !user,
+      skip: !user
     });
 
     const renderBackdrop = useCallback(
@@ -39,12 +40,31 @@ const Favoris = () => {
           []);
 
     useFocusEffect(
-      useCallback(() => {
-         if (user) {
-            refetch();
-         }
-      }, [user])
-   );
+    useCallback(() => {
+      if (user?.$id) {
+        loadFavoris(user.$id);
+        refetch();
+      }
+    }, [user?.$id, loadFavoris])
+  );
+
+  const confirmRemovedFavori = useCallback(async () => {
+    if (!pendingRemoveItem || !user) return;
+
+    try {
+      await removeFavori(user.$id, pendingRemoveItem.$id);
+      
+      modalPendingRemoveItem.current?.dismiss();
+      await refetch(); 
+      setModalDeleteVisible(true);
+      setTimeout(() => {
+        setModalDeleteVisible(false);
+        setPendingRemoveItem(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Erreur suppression favori:', error);
+    }
+  }, [pendingRemoveItem, user, removeFavori,refetch]);
 
    if(!user) return;
 
@@ -60,23 +80,7 @@ const Favoris = () => {
          setPendingRemoveItem(item);
        }
      }
-     const confirmRemovedFavori = async ()=> {
-   
-       if(!pendingRemoveItem || !user) return;
-   
-       const favori = await getFavori({userId: user?.$id, restaurantId: pendingRemoveItem?.$id});
-   
-       if(favori) await DeleteFavori(favori.$id);
-   
-       modalPendingRemoveItem.current?.dismiss();
-       setRemovedFavoris(prev => [...prev, pendingRemoveItem.$id]);
-       setModalDeleteVisible(true);
-
-      await refetch()
-       setTimeout(() => (setModalDeleteVisible(false),setPendingRemoveItem(null)),2000);
-   
-     }
-
+     
      
 
     
@@ -92,7 +96,7 @@ const Favoris = () => {
       keyExtractor={item => item.$id}
       contentContainerStyle={{ paddingHorizontal: 5, paddingTop: 15, rowGap: 15, paddingBottom: 25,flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
-      renderItem={({item})=> <RestaurantCard item={item} onFavoriChange={handleChangeFavori} removedFavoris={removedFavoris} />}
+      renderItem={({item})=> <RestaurantCard item={item} onFavoriChange={handleChangeFavori}  />}
       ListHeaderComponent={()=> {
         if (loading) {
                       return (
