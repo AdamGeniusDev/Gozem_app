@@ -1,15 +1,16 @@
-import { View, Text, Pressable, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native'
+import { View, Text, Pressable, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, FlatList } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { images } from '@/constants'
 import { UseCartStore } from '@/store/cart.store'
 import useLocationStore from '@/store/location.store'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { TextInput } from 'react-native-gesture-handler'
 import useAppwrite from '@/lib/useAppwrite'
 import { Coords, Restaurant } from '@/types/type'
 import { getRestaurantInformations } from '@/lib/appwrite'
 import { CalculateDistance, CalculatePriceFromDistance } from '@/lib/map'
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet'
 
 const FinalPanier = () => {
   const { id } = useLocalSearchParams();
@@ -24,6 +25,7 @@ const FinalPanier = () => {
   const [coord, setCoord] = useState<Coords | null>(null);
   const [distance, setDistance] = useState<number>(0);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
+  
 
   // Location store
   const { coords, getAll, reverseGeocode, convertAddress } = useLocationStore();
@@ -49,6 +51,8 @@ const FinalPanier = () => {
     () => SoustotalPrice + livraisonPrice,
     [SoustotalPrice, livraisonPrice]
   );
+
+const finalModal = useRef<BottomSheetModal>(null);
 
   // Global loading effect - charge tout en parallèle
   useEffect(() => {
@@ -125,6 +129,18 @@ const FinalPanier = () => {
   const handleGoBack = useCallback(() => {
     router.back();
   }, []);
+
+  const renderBackdrop = useCallback(
+      (props: any) => (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          pressBehavior="close"
+        />
+      ),
+      []
+    );
 
   // Afficher le loader global pendant le chargement
   if (isGlobalLoading || restaurantLoading) {
@@ -324,12 +340,104 @@ const FinalPanier = () => {
               </View>
             </Pressable>
 
-            <Pressable className='rounded-full bg-primary-300 items-center py-4'>
+            <Pressable className='rounded-full bg-primary-300 items-center py-4' onPress={()=> finalModal.current?.present()}>
               <Text className='font-semibold text-[14px] text-white'>Commander · {totalPrice} F</Text>
             </Pressable>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+       <BottomSheetModal
+        ref={finalModal}
+        snapPoints={['60%']}
+        handleIndicatorStyle={{ display: 'none' }}
+        enablePanDownToClose={false}
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+      >
+        <BottomSheetView className='p-4 bg-white gap-y-2'>
+         
+         <View>
+          <Text className='font-poppins-bold text-[18px]'>Confirmation de la commande !</Text>
+          <Text className='font-regular text-[14px] text-neutral-600'>Verifier si votre commande est correcte...</Text>
+         </View>
+         <View className='py-2 px-2 gap-y-2' style={{elevation: 5}}>
+
+          <View className='flex-row gap-x-2'>
+
+            <Image source={{uri: restaurant?.restaurantLogo}} style={{width: 15, height: 15}} resizeMode='contain' />
+
+            <Text className='font-poppins-bold text-[13px]'>{restaurant?.restaurantName}</Text>
+
+          </View>
+            <FlatList 
+            data={restaurantsItems}
+            keyExtractor={(item,index)=> `${item.$id}-${index}`}
+            renderItem={({item,index})=> {
+               const hasAccompagnement = item.customizations?.some((c) => c.accompagnement);
+                const supplements = item.customizations?.filter((c) => !c.accompagnement) || [];
+                const supplementsPrice = item.customizations?.reduce(
+                  (sum, c) => sum + (c.price * c.quantity),
+                  0
+                ) || 0;
+                const itemTotalPrice = (item.normalPrice + supplementsPrice) * item.quantity;
+
+              return (
+                  <View
+                    key={item.$id}
+                    className='flex-row gap-x-5 items-center border-neutral-200'
+                    style={{
+                      borderBottomWidth: 1,
+                      paddingBottom: 15,
+                      marginBottom: 15,
+                      borderStyle: index === restaurantsItems.length - 1 ? 'dashed' : 'solid',
+                    }}
+                  >
+                    <View className='px-3'>
+                      <Text className='font-semibold text-[16px]'>{item.quantity} x</Text>
+                    </View>
+
+                    <View className='flex-1 flex-row'>
+                      <View style={{ width: '70%', rowGap: 3 }}>
+                        <Text className='font-medium text-[15px] text-black'>{item.menuName}</Text>
+
+                        {hasAccompagnement && (
+                          <View style={{ marginTop: 5 }}>
+                            <Text className='font-semibold text-neutral-600 text-[13px]'>Accompagnement</Text>
+                            {item.customizations
+                              ?.filter((c) => c.accompagnement)
+                              .map((c, idx) => (
+                                <Text key={idx} className='text-neutral-600 text-[12px] ml-2' style={{ marginTop: 2 }}>
+                                  • {c.accompagnement}
+                                </Text>
+                              ))}
+                          </View>
+                        )}
+
+                        {supplements.length > 0 && (
+                          <View style={{ marginTop: 5 }}>
+                            <Text className='font-semibold text-neutral-600 text-[13px]'>Supplément</Text>
+                            {supplements.map((supp, idx) => (
+                              <Text key={idx} className='text-neutral-600 text-[12px] ml-2' style={{ marginTop: 2 }}>
+                                • {supp.quantity}x {supp.name} - {supp.price * supp.quantity} F
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+
+                      <View className='items-center gap-y-2' style={{ width: '30%' }}>
+                        <Text className='font-semibold text-[15px]'>{itemTotalPrice} F</Text>
+                      </View>
+                    </View>
+                  </View>
+              )
+            }}
+            />
+         </View>
+
+        </BottomSheetView>
+      </BottomSheetModal>
     </KeyboardAvoidingView>
   );
 };

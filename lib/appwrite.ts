@@ -22,6 +22,7 @@ export const appwriteConfig = {
     specialitiesCollectionId: '6901bfbf001392560b0f',
     restaurantsSpecialitiesCollectionId: '6901c11f002fe51eda14',
     favorisCollectionId: '690894fa00051cf10b5c',
+    commandesCollectionId: '6911ec7a00244097fb76',
 };
 
 export const client = new Client();
@@ -74,9 +75,7 @@ export async function ensureClerkSession(getToken: GetTokenFn) {
     }
 }
 
-export async function logoutAppwrite() {
-    // La déconnexion se fait uniquement via Clerk
-}
+
 
 export async function initAppwriteAfterLogin(getToken: GetTokenFn, clerkUserId?: string) {
     // Vérifier juste que l'utilisateur est connecté à Clerk
