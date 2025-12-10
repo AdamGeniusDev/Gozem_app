@@ -7,6 +7,7 @@ import { Href,router } from 'expo-router'
 type Operation = {
     text: string,
     icone: ImageSourcePropType,
+    path: Href,
 }
 type ServiceKey = 'zem' | 'tricycle' | 'voiture' | 'eco' | 'prestige' | 'porto' | 'heure' | 'evenement' |  'ouidah'
 type Data = {
@@ -19,7 +20,7 @@ type Data = {
   }
   
   const ServiceModal = ({data}: {data:Data}) => {
-    const snapPoints = data.nop>2 ? ['65%'] : ['45%'];
+    const snapPoints = data.nop> 2 ? ['65%'] : ['45%'];
 
     const SERVICE_PATH : Record<ServiceKey,Href> = {
       zem: '/(services)/zem',
@@ -100,10 +101,12 @@ type Data = {
         </View>
         {data.operation.slice(0,data.nop).map((item, i) => {
           return (
-            <View key={i} style={{
+            <Pressable key={i} style={{
               paddingRight: 15,
               paddingLeft: 15,
-            }}>
+            }}
+            onPress={()=> (router.push(item.path), closeModal())}
+            >
               <View className='h-[75px] flex-row items-center justify-between border-neutral-200' style={{borderBottomWidth: 1}}>
               <View className='flex-row gap-3 items-center'>
                 <Image source={item.icone} className='w-[25px] h-[25px]' resizeMode='contain'/>
@@ -111,7 +114,7 @@ type Data = {
               </View>      
               <Image source={images.droite} className='w-[10px] h-[10px]' tintColor={'#B0B3B2'}/>       
             </View>
-            </View>
+            </Pressable>
           )
         })}
         <View style={{

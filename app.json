@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "gozemapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.adam.gozem",
       "supportsTablet": true,
@@ -50,17 +50,15 @@
           "organization": "adam-4y"
         }
       ],
-
       [
-      "expo-notifications",
-      {
-        "icon": "./assets/images/notification.png",
-        "color": "#169137"
-      }
-    ]
-    
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification.png",
+          "color": "#169137"
+        }
+      ],
+      "expo-build-properties"
     ],
-    
     "experiments": {
       "typedRoutes": true
     },

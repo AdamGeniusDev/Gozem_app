@@ -17,6 +17,8 @@ type LocationProps = {
 
   askPermission: () => Promise<Perms>;
   getAll: () => Promise<void>;
+  convertAddress: ({address}:{address:string}) => Promise<Coords>;
+  reverseGeocode : ({latitude,longitude}: Coords) => Promise<string>;
 };
 
 const useLocationStore = create<LocationProps>()(
@@ -48,7 +50,7 @@ const useLocationStore = create<LocationProps>()(
           set({ isLoading: true, error: null });
 
           const loc = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced, // fais un compromis entre les performances et la batterie
+            accuracy: Location.Accuracy.BestForNavigation, // fais un compromis entre les performances et la batterie
           });
 
           const coords = {
@@ -67,6 +69,48 @@ const useLocationStore = create<LocationProps>()(
           set({ isLoading: false, error: e?.message ?? 'Location error' });
         }
       },
+      convertAddress: async({address}:{address:string}) => {
+       
+
+          const api_key= process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
+          if (!api_key) throw new Error("Geoapify API key missing");
+
+          const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&apiKey=${api_key}`;
+
+          const response = await fetch(url);
+          const data = await response.json();
+
+           if (!data.features?.length) {
+              throw new Error("Adresse introuvable");
+            }
+
+            const {lat,lon} = data.features[0].properties;
+            return {latitude: lat, longitude:lon};
+       
+      },
+      reverseGeocode: async ({ latitude, longitude }: Coords): Promise<string> => {
+        try {
+          const api_key = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
+          if (!api_key) throw new Error("Geoapify API key missing");
+
+          const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${latitude}&lon=${longitude}&apiKey=${api_key}`;
+
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (!data.features?.length) {
+            throw new Error("Adresse introuvable");
+          }
+
+          const address = data.features[0].properties.formatted;
+
+          return address;
+        } catch (e: any) {
+          console.error("Erreur reverseGeocode:", e.message);
+          throw new Error(e?.message ?? "Erreur de conversion des coordonnées");
+        }
+      },
+
 
     }),
     {

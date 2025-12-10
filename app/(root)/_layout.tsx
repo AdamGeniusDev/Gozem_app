@@ -5,6 +5,8 @@ import { isProfileComplete } from '@/lib/appwrite';
 import { Image, ImageSourcePropType, Text, View, Pressable } from 'react-native';
 import { images } from '@/constants';
 import { useTranslation } from 'react-i18next';
+import { useUserStore } from '@/store/user.store';
+import { useFavorisStore } from '@/store/favoris.store';
 
 interface TabBarIconProps {
   icon: ImageSourcePropType;
@@ -16,13 +18,23 @@ export default function TabLayout() {
 
   const {t} = useTranslation();
   const { isSignedIn, getToken, userId } = useAuth();
+  const user = useUserStore(state => state.user);
+  const { loadFavoris, clearFavoris } = useFavorisStore();
+
+   useEffect(() => {
+    if (user?.$id) {
+      loadFavoris(user.$id);
+    } else {
+      clearFavoris();
+    }
+  }, [user?.$id, loadFavoris, clearFavoris]);
 
   useEffect(() => {
     const checkProfile = async () => {
       if (userId && getToken) {
         try {
           const isComplete = await isProfileComplete(userId, getToken);
-          if (!isComplete) router.replace('/(auth)/info'); // Redirect correct en effet
+          if (!isComplete) router.replace('/(auth)/info'); 
         } catch (error) {
           console.error('Erreur:', error);
         }
@@ -89,11 +101,11 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="adresses"
-        options={{ title: t("layoutRoot.addresses"), tabBarIcon: ({ focused }) => <TabBarIcon title="Adresses" icon={images.adresse} focused={focused} /> }}
+        options={{ title: t("layoutRoot.addresses"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.addresses")} icon={images.adresse} focused={focused} /> }}
       />
       <Tabs.Screen
         name="activity"
-        options={{ title: t("layoutRoot.activity"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.addresses")} icon={images.activity} focused={focused} /> }}
+        options={{ title: t("layoutRoot.activity"), tabBarIcon: ({ focused }) => <TabBarIcon title={t("layoutRoot.activity")} icon={images.activity} focused={focused} /> }}
       />
       <Tabs.Screen
         name="compte"

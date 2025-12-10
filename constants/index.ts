@@ -1,77 +1,94 @@
 import loader from '../assets/anim/Cosmos.json';
+import image1 from '../assets/images/1.jpg';
 import activity from '../assets/images/activity.png';
 import aide from '../assets/images/aide.png';
+import anglais from '../assets/images/anglais.png';
+import apero from '../assets/images/apero.png';
+import attieke from '../assets/images/attieke.jpg';
 import back from '../assets/images/back.png';
+import billet from '../assets/images/billet.png';
+import boutique from '../assets/images/boutique.png';
 import cadenas from '../assets/images/cadenas.png';
 import calendrier from '../assets/images/calendrier.png';
 import cloche from '../assets/images/cloche.png';
 import close from '../assets/images/close.png';
 import cocher from '../assets/images/cocher.png';
+import favori from '../assets/images/coeur.png';
+import coeurp from '../assets/images/coeurp.png';
+import commande from '../assets/images/commande.png';
+import croix from '../assets/images/croix.png';
+import deleted from '../assets/images/delete.png';
+import del from '../assets/images/deletedroite.png';
+import depart from '../assets/images/depart.png';
+import dest from '../assets/images/dest.png';
+import disabled from '../assets/images/disabled.png';
 import droite from '../assets/images/droite.png';
+import eco from '../assets/images/eco.png';
 import email from '../assets/images/email.png';
+import etoile from '../assets/images/etoile.png';
+import evenement from '../assets/images/evenement.png';
+import expand from '../assets/images/expand.png';
 import femme from '../assets/images/feminin.png';
+import fil from '../assets/images/fil.png';
+import food from '../assets/images/fourchette.png';
+import francais from '../assets/images/france.png';
 import genre from '../assets/images/genre.png';
 import gmail from '../assets/images/gmail.png';
 import gozem from '../assets/images/gozem.png';
+import heure from '../assets/images/heure.png';
+import historique from '../assets/images/historique.png';
 import homme from '../assets/images/homme.png';
 import identite from '../assets/images/identite.png';
+import langue from '../assets/images/langue.png';
+import livraison from '../assets/images/livraison.png';
 import adresse from '../assets/images/local.png';
+import locate from '../assets/images/localisation.png';
+import logout from '../assets/images/logout.png';
 import acceuil from '../assets/images/maison.png';
+import modalback from '../assets/images/modalback.png';
+import moins from '../assets/images/moins.png';
+import monnaie from '../assets/images/monnaie.png';
+import notif from '../assets/images/notif.png';
 import nvisible from '../assets/images/oeil-coupe.png';
 import visible from '../assets/images/oeil-ouvert.png';
-import compte from '../assets/images/personne.png';
-import sms from '../assets/images/sms.png';
-import utilisateur from '../assets/images/utilisateur.png';
-import checked from '../assets/images/verifie.png';
-import welcome from '../assets/images/welcome.png';
-import whats from '../assets/images/whatsapp.png';
-import image1 from '../assets/images/1.jpg';
-import eco from '../assets/images/eco.png';
-import evenement from '../assets/images/evenement.png';
-import heure from '../assets/images/heure.png';
 import ouidah from '../assets/images/ouidah.png';
-import porto from '../assets/images/porto-novo.png';
-import prestige from '../assets/images/prestige.png';
-import repas from '../assets/images/repas.png';
-import shopping from '../assets/images/shopping.png';
-import tricycle from '../assets/images/tricycle.png';
-import voiture from '../assets/images/voiture.png';
-import school from '../assets/images/school.png';
-import zem from '../assets/images/zem.png';
-import supermarche from '../assets/images/supermarche.png';
-import apero from '../assets/images/apero.png';
 import panier from '../assets/images/panier.png';
-import resto from '../assets/images/resto.png';
-import monnaie from '../assets/images/monnaie.png';
-import modalback from '../assets/images/modalback.png';
+import panierr from '../assets/images/panierf.png';
+import params from '../assets/images/params.png';
+import parrainage from '../assets/images/parrain.png';
+import parrain from '../assets/images/parrainage.png';
+import compte from '../assets/images/personne.png';
+import pizza from '../assets/images/pizza.jpg';
+import plus from '../assets/images/plus.png';
 import porgozem from '../assets/images/porgozem.png';
 import portefeuille from '../assets/images/portefeuille.png';
-import plus from '../assets/images/plus.png';
-import pizza from '../assets/images/pizza.jpg';
-import riz from '../assets/images/riz.jpg';
-import attieke from '../assets/images/attieke.jpg';
-import etoile from '../assets/images/etoile.png';
-import expand from '../assets/images/expand.png';
-import fil from '../assets/images/fil.png';
-import depart from '../assets/images/depart.png';
-import dest from '../assets/images/dest.png';
-import locate from '../assets/images/localisation.png';
-import search from '../assets/images/search.png';
-import params from '../assets/images/params.png';
-import talk from '../assets/images/talk.png';
-import support from '../assets/images/support.png';
-import historique from '../assets/images/historique.png';
+import porto from '../assets/images/porto-novo.png';
+import prestige from '../assets/images/prestige.png';
 import reduction from '../assets/images/reduction.png';
-import ticket from '../assets/images/ticket.png';
-import parrain from '../assets/images/parrainage.png';
+import repas from '../assets/images/repas.png';
+import resto from '../assets/images/resto.png';
+import riz from '../assets/images/riz.jpg';
+import school from '../assets/images/school.png';
+import search from '../assets/images/search.png';
 import settings from '../assets/images/settings.png';
-import langue from '../assets/images/langue.png';
-import logout from '../assets/images/logout.png';
-import deleted from '../assets/images/delete.png';
-import del from '../assets/images/deletedroite.png';
-import francais from '../assets/images/france.png';
-import anglais from '../assets/images/anglais.png';
-import notif from '../assets/images/notif.png';
+import shopping from '../assets/images/shopping.png';
+import sms from '../assets/images/sms.png';
+import supermarche from '../assets/images/supermarche.png';
+import support from '../assets/images/support.png';
+import talk from '../assets/images/talk.png';
+import ticket from '../assets/images/ticket.png';
+import treduction from '../assets/images/ticketreduction.png';
+import total from '../assets/images/total.png';
+import tricycle from '../assets/images/tricycle.png';
+import utilisateur from '../assets/images/utilisateur.png';
+import checked from '../assets/images/verifie.png';
+import voiture from '../assets/images/voiture.png';
+import welcome from '../assets/images/welcome.png';
+import whats from '../assets/images/whatsapp.png';
+import zem from '../assets/images/zem.png';
+import facture from '../assets/images/facture.png';
+import placeholder from '../assets/images/placeholder.jpg';
+
 
 
 export const footer = [
@@ -249,11 +266,13 @@ export const services = [
     "operation": [
       {
         'text': 'Restaurants',
-        'icone': resto,
+        'icone': resto,    
+         'path': '/(restaurants)/food',
     },
     {
         'text': 'Bien manger a 1000F',
         'icone': monnaie,
+         'path' : '/(restaurants)/food',
     },
   ],
     "image": repas
@@ -291,6 +310,7 @@ export const images ={
     utilisateur,
     acceuil,
     aide,
+    panier,
     adresse,
     activity,
     compte,
@@ -325,5 +345,21 @@ export const images ={
     del,
     francais,
     anglais,
-    notif
+    notif,
+    disabled,
+    treduction,
+    parrainage,
+    food,
+    favori,
+    panierr,
+    commande,
+    coeurp,
+    moins,
+    total,
+    livraison,
+    billet,
+    croix,
+    boutique,
+    facture,
+    placeholder,
 };

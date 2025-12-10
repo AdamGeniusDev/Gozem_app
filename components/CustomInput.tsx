@@ -1,5 +1,4 @@
 import { View, Image, TextInput, TextInputProps, ImageSourcePropType, Pressable } from 'react-native'
-import React from 'react'
 
 interface CustomInputProps extends TextInputProps{
     image: ImageSourcePropType,

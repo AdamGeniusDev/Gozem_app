@@ -7,9 +7,10 @@ interface CustomButtonProps extends PressableProps {
   disabled?: boolean;
   bg?: string;
   className?: string;
+  textColor?: string;
 }
 
-const CustomButton = ({ titre, disabled = false, bg='bg-primary-400', className, ...props }: CustomButtonProps) => {
+const CustomButton = ({ titre, disabled = false, bg='bg-primary-400', className, textColor, ...props }: CustomButtonProps) => {
   return (
     <Pressable
       className={cn(
@@ -22,7 +23,7 @@ const CustomButton = ({ titre, disabled = false, bg='bg-primary-400', className,
     >
       <Text className={cn(
         "font-extra text-center text-[16px]",
-        disabled ? "text-neutral-400" : "text-white"
+        textColor ? textColor : disabled ? "text-neutral-400" : "text-white"
       )}>
         {titre}
       </Text>

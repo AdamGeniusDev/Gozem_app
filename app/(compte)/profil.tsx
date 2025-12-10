@@ -289,7 +289,6 @@ const Profil = () => {
     { title: t('profile.fields.birthday'), field: "date", icon: images.calendrier, value: form.validDate ? formatAppwriteDate(form.validDate) : (userDate ?? ""), onOpen: openModalDate, onClose: closeDateModal },
   ]
 
-  // ✅ Charger les données du store au montage
   useEffect(() => {
     if (!isLoaded || !userId) return;
     loadUser(getToken, userId);

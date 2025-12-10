@@ -9,6 +9,7 @@ import { account } from '@/lib/appwrite';
 import useAuthStore from '@/store/auth.store';
 import { useClerk } from '@clerk/clerk-expo';
 import { useTranslation } from 'react-i18next'; 
+import { useUserStore } from '@/store/user.store';
 
 type MainSettings = {
   title: string,
@@ -21,9 +22,10 @@ const Settings = () => {
   const { t } = useTranslation(); 
 
   const modalRef = useRef<BottomSheetModal>(null);
-  const { logout } = useAuthStore();
   const { signOut } = useClerk();
   const [loading, setLoading] = useState(false);
+  const {logout,resetPersistedStore} = useAuthStore.getState();
+  const resetUserStore = useUserStore((state) => state.resetStore)
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -59,11 +61,19 @@ const Settings = () => {
     try {
       setLoading(true);
 
+    
+
+
       await logout();
+
       await signOut();
       await account.deleteSession('current').catch(() => {});
 
       router.replace('/(auth)/sign');
+
+      await resetPersistedStore();
+      resetUserStore();
+
     } catch (e) {
       console.log('Erreur de déconnexion:', e);
     } finally {
