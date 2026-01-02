@@ -569,7 +569,7 @@ const RestaurantDetails = () => {
                 <Text className='font-regular text-[15px] text-neutral-600' numberOfLines={2}>
                     {item.description}
                 </Text>
-                <Text className='font-poppins-bold text-[18px] mt-1'>{item.normalPrice} F</Text>
+                <Text className='font-poppins-bold text-[18px] mt-1'>{item.reductionPrice} F</Text>
             </View>
             <View className='px-4 py-2 rounded-lg'>
                 <Image 

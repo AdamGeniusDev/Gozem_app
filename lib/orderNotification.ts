@@ -41,13 +41,7 @@ export const sendPushNotificationToToken = async (
   }
 };
 
-// ============================================
-// RÉCUPÉRER LE TOKEN D'UN UTILISATEUR
-// ============================================
 
-// ============================================
-// ENVOYER NOTIFICATION COMPLÈTE (PUSH + BD)
-// ============================================
 export const sendCompleteNotification = async (
   userId: string,
   title: string,

@@ -1,10 +1,12 @@
-import { CreateOrderData, CreateOrderItemData, CreateUserPrams, GetSpecialitiesOptions, Menu, Order, OrderItem, Restaurant, Speciality, Supplement, UserDoc ,Notification} from '@/types/type';
+import { CreateOrderData, CreateOrderItemData, CreateUserPrams, GetSpecialitiesOptions, Menu, Order, OrderItem, Restaurant, Speciality, Supplement, UserDoc ,Notification, OrderItemApp, OrderWithItemsApp, OrderHistoryItem} from '@/types/type';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { Account, Client, Databases, ID, Query, Storage } from 'react-native-appwrite';
+import { formatDateRelative } from './utils';
 
 type GetTokenFn = (opt?: { skipCache?: boolean }) => Promise<string | null>;
+
 
 const androidPkg = Constants.expoConfig?.android?.package ?? 'host.exp.exponent';
 const iosBundle = Constants.expoConfig?.ios?.bundleIdentifier ?? 'host.exp.Exponent';
@@ -23,7 +25,7 @@ export const appwriteConfig = {
     restaurantsSpecialitiesCollectionId: '6901c11f002fe51eda14',
     favorisCollectionId: '690894fa00051cf10b5c',
     commandesCollectionId: '6911ec7a00244097fb76',
-    ordersCollectionId: '6911ec7a00244097fb76',
+    ordersCollectionId: '693da806001a7509fd47',
     orderItemCollectionId: '6915b1a4000a72b940f9',
     notificationCollectionId: '69175f570038aeb16477',
 };
@@ -666,7 +668,7 @@ export const getUserAllFavori = async(userId: string): Promise<Restaurant[]> => 
   }
 };
 
-export const getMenuLowPrice = async(restaurant: string): Promise<Menu | null> => {
+export const getMenuLowPrice = async(restaurant: string): Promise<Menu> => {
   try {
     if (!restaurant) {
       throw new Error('restaurantId est requis');
@@ -682,11 +684,11 @@ export const getMenuLowPrice = async(restaurant: string): Promise<Menu | null> =
       ]
     );
 
-    return menu.documents[0] ? (menu.documents[0] as unknown as Menu) : null;
+    return (menu.documents[0] as unknown as Menu) ;
 
   } catch (e) {
     console.error('Erreur getMenuLowPrice:', e);
-    return null; // Retourner null au lieu de throw
+    throw new Error(e instanceof Error ? e.message : String(e));
   }
 };
 
@@ -824,66 +826,89 @@ export async function updateExpoPushToken(userId: string, newToken: string) {
   }
 }
 
+
 export const createOrder = async (
   order: CreateOrderData, 
   orderItems: CreateOrderItemData[] 
 ) => {
-  let createdOrder: Order | null = null;
-  const createdItems: OrderItem[] = [];
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-  try {
-    
-    createdOrder = await databases.createDocument<Order>(
-      appwriteConfig.databaseId,
-      appwriteConfig.ordersCollectionId,
-      ID.unique(),
-      order 
-    );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let createdOrder: Order | null = null;
+    const createdItems: OrderItem[] = [];
 
-    
-    for (const item of orderItems) {
-      try {
+    try {
+      // ✅ UTILISER notre fonction personnalisée au lieu de ID.unique()
+      const orderId = ID.unique();
+      
+      console.log(`🆕 Tentative ${attempt}/${maxRetries} - Création commande avec ID:`, orderId);
+      
+   
+
+      // Créer la commande principale
+      createdOrder = await databases.createDocument<Order>(
+        appwriteConfig.databaseId,
+        appwriteConfig.ordersCollectionId,
+        orderId,
+        order
+      );
+      console.log('✅ Commande principale créée:', createdOrder.$id);
+
+      // Créer les items de commande
+      for (const item of orderItems) {
+        const itemId =ID.unique(); // ✅ Utiliser aussi ici
+        
         const createdItem = await databases.createDocument<OrderItem>(
           appwriteConfig.databaseId,
           appwriteConfig.orderItemCollectionId,
-          ID.unique(),
+          itemId,
           {
             ...item,
-            customizations: JSON.stringify(item.customizations || []),
             orderId: createdOrder.$id,
           }
         );
+        console.log('✅ Item créé:', createdItem.$id);
         createdItems.push(createdItem);
-      } catch (itemError) {
-        console.error('❌ Erreur création item:', itemError);
-        
-        
-        console.log('🔄 Début du rollback...');
-        await rollbackOrder(createdOrder.$id, createdItems);
-        
-        throw new Error(
-          `Échec création item: ${itemError instanceof Error ? itemError.message : 'Erreur inconnue'}`
-        );
       }
+
+      console.log('✅✅✅ Commande créée avec succès:', createdOrder.$id);
+      
+      return {
+        order: createdOrder,
+        items: createdItems,
+      };
+
+    } catch (error: any) {
+      const errorMsg = error?.message || String(error);
+      console.error(`❌ Tentative ${attempt}/${maxRetries} échouée:`, errorMsg);
+      
+      lastError = error instanceof Error ? error : new Error(errorMsg);
+      
+      if (createdOrder) {
+        console.log('🔄 Rollback de la commande créée...');
+        try {
+          await rollbackOrder(createdOrder.$id, createdItems);
+        } catch (rollbackError) {
+          console.error('❌ Erreur rollback:', rollbackError);
+        }
+      }
+      
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      const delay = attempt * 500;
+      console.log(`🔄 Nouvelle tentative dans ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-
-    console.log('✅ Commande créée avec succès:', createdOrder.$id);
-    
-    return {
-      order: createdOrder,
-      items: createdItems,
-    };
-
-  } catch (error) {
-    console.error("❌ Erreur lors de la création de la commande:", error);
-    
-    throw new Error(
-      error instanceof Error 
-        ? error.message 
-        : "Erreur inconnue lors de la création de la commande"
-    );
   }
+
+  throw new Error(
+    `Impossible de créer la commande après ${maxRetries} tentatives. Dernière erreur: ${lastError?.message || 'Erreur inconnue'}`
+  );
 };
+
 
 
 const rollbackOrder = async (
@@ -925,34 +950,14 @@ const rollbackOrder = async (
     console.log('✅ Commande supprimée');
 
     if (errors.length > 0) {
-      console.warn('⚠️ Rollback partiel, certains items n\'ont pas pu être supprimés:', errors);
+      console.warn('⚠️ Rollback partiel:', errors);
     } else {
-      console.log('✅ Rollback complet effectué avec succès');
+      console.log('✅ Rollback complet effectué');
     }
 
   } catch (rollbackError) {
     console.error('❌ ERREUR CRITIQUE lors du rollback:', rollbackError);
-    
-    throw new Error(
-      `Rollback échoué pour la commande ${orderId}. Intervention manuelle requise.`
-    );
-  }
-};
-
-export const getUserNotificationToken = async (userId: string): Promise<string | null> => {
-  try {
-    if (!userId) return null;
-    
-    const userDoc = await databases.getDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.userCollectionId,
-      userId
-    );
-    
-    return userDoc.token || null;
-  } catch (error) {
-    console.error('❌ Erreur récupération token:', error);
-    return null;
+    // Ne pas throw ici pour ne pas masquer l'erreur principale
   }
 };
 
@@ -1057,6 +1062,8 @@ export const createGlobalNotification = async (
 
 export const getNotifications = async (userId: string): Promise<Notification[]> => {
   try {
+
+    deleteOldNotifications(userId, 2).catch(console.error);
     const response = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.notificationCollectionId,
@@ -1071,6 +1078,21 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
   } catch (error) {
     console.error('❌ Erreur récupération notifications:', error);
     throw error;
+  }
+};
+
+export const getUserNotificationToken = async (userId: string): Promise<string | null> => {
+  try {
+    const userDoc = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.userCollectionId,
+      userId
+    );
+    
+    return userDoc.token || null;
+  } catch (error) {
+    console.error('❌ Erreur récupération token:', error);
+    return null;
   }
 };
 
@@ -1171,7 +1193,7 @@ export const deleteNotification = async (notificationId: string) => {
   }
 };
 
-export const deleteOldNotifications = async (userId: string, daysOld = 5) => {
+export const deleteOldNotifications = async (userId: string, daysOld = 2) => {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
@@ -1198,6 +1220,584 @@ export const deleteOldNotifications = async (userId: string, daysOld = 5) => {
     console.log(`✅ ${oldNotifications.total} anciennes notifications supprimées`);
   } catch (error) {
     console.error('❌ Erreur suppression anciennes notifications:', error);
+    throw error;
+  }
+};
+
+export const getOrder = async (
+  orderId?: string,
+  restaurantId?: string,
+  getToken?: GetTokenFn
+): Promise<OrderWithItemsApp[] | OrderWithItemsApp> => {
+  try {
+    if (!restaurantId && !orderId) {
+      throw new Error('orderId ou restaurantId requis');
+    }
+
+    
+    const parseOrderItems = (items: OrderItem[]): OrderItemApp[] => {
+      return items.map((item) => {
+        let parsedCustomizations = [];
+        
+        try {
+          // Vérifier si customizations existe et est une string
+          if (item.customizations && typeof item.customizations === 'string') {
+            parsedCustomizations = JSON.parse(item.customizations);
+          } else if (Array.isArray(item.customizations)) {
+            // Si c'est déjà un tableau, l'utiliser directement
+            parsedCustomizations = item.customizations;
+          }
+        } catch (error) {
+          console.error('❌ Erreur parsing customizations pour item:', item.$id, error);
+          parsedCustomizations = [];
+        }
+
+        return {
+          ...item,
+          customizations: parsedCustomizations,
+        } as OrderItemApp;
+      });
+    };
+
+    if (restaurantId) {
+      const operationRestaurant = async () => {
+        // 1. Récupérer les commandes du restaurant
+        const response = await databases.listDocuments<Order>(
+          appwriteConfig.databaseId,
+          appwriteConfig.ordersCollectionId,
+          [
+            Query.equal('restaurantId', restaurantId),
+            Query.orderDesc('$createdAt'),
+            Query.limit(100),
+          ]
+        );
+
+        // 2. Pour chaque commande, récupérer et parser les items
+        const ordersWithItems = await Promise.all(
+          response.documents.map(async (order) => {
+            // Récupérer les items de cette commande
+            const itemsResponse = await databases.listDocuments<OrderItem>(
+              appwriteConfig.databaseId,
+              appwriteConfig.orderItemCollectionId,
+              [
+                Query.equal('orderId', order.$id),
+                Query.limit(100),
+              ]
+            );
+
+            // Parser les customizations
+            const parsedItems = parseOrderItems(itemsResponse.documents);
+
+            return {
+              ...order,
+              items: parsedItems,
+            } as OrderWithItemsApp;
+          })
+        );
+
+        return ordersWithItems;
+      };
+
+      return getToken 
+        ? await withRetry(operationRestaurant, 2, getToken)
+        : await operationRestaurant();
+    }
+
+    if (orderId) {
+      const operation = async () => {
+        const order = await databases.getDocument<Order>(
+          appwriteConfig.databaseId,
+          appwriteConfig.ordersCollectionId,
+          orderId
+        );
+
+        // Récupérer les items de la commande
+        const itemsResponse = await databases.listDocuments<OrderItem>(
+          appwriteConfig.databaseId,
+          appwriteConfig.orderItemCollectionId,
+          [
+            Query.equal('orderId', orderId),
+            Query.limit(100),
+          ]
+        );
+
+        // Parser les customizations
+        const parsedItems = parseOrderItems(itemsResponse.documents);
+
+        // Retourner un seul objet (pas un tableau)
+        return {
+          ...order,
+          items: parsedItems,
+        } as OrderWithItemsApp;
+      };
+
+      return getToken 
+        ? await withRetry(operation, 2, getToken)
+        : await operation();
+    }
+
+    return [];
+
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateOrder = async (
+  orderId: string,
+  status: Order['status'],
+  markAsNotified?: boolean
+) => {
+  try {
+    
+    const updateData: Partial<Order> = {
+      status: status
+    };
+    
+    if (markAsNotified) {
+      updateData.livreurNotified = true;
+    }
+    
+    const update = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.ordersCollectionId,
+      orderId,
+      updateData
+    );
+
+    return update;
+  } catch(e) {
+    throw new Error(e as string);
+  }
+};
+
+export const updateOrderNotificationStatus = async (
+  orderId: string,
+  notified: boolean
+): Promise<void> => {
+  try {
+    await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.ordersCollectionId,
+      orderId,
+      {
+        livreurNotified: notified
+      }
+    );
+  } catch (error) {
+    console.error('Error updating notification status:', error);
+    throw error;
+  }
+};
+
+export const getUserOrdersHistory = async (
+  userId: string,
+  getToken?: GetTokenFn
+): Promise<OrderHistoryItem[]> => {
+  try {
+    if (!userId) {
+      throw new Error('userId requis');
+    }
+
+    console.log('📦 Récupération historique pour userId:', userId);
+
+    const operation = async () => {
+      // 1. Récupérer les commandes avec les statuts spécifiés
+      const response = await databases.listDocuments<Order>(
+        appwriteConfig.databaseId,
+        appwriteConfig.ordersCollectionId,
+        [
+          Query.equal('userId', userId),
+          Query.or([
+            Query.equal('status', 'rejected'),
+            Query.equal('status', 'canceled'),
+            Query.equal('status', 'delivered')
+          ]),
+          Query.orderDesc('$createdAt'),
+          Query.limit(100),
+        ]
+      );
+
+      console.log(`✅ ${response.documents.length} commande(s) trouvée(s)`);
+
+      // 2. Pour chaque commande, enrichir avec les données restaurant et items
+      const ordersWithDetails = await Promise.all(
+        response.documents.map(async (order) => {
+          try {
+            // Récupérer les informations du restaurant
+            const restaurant = await databases.getDocument<Restaurant>(
+              appwriteConfig.databaseId,
+              appwriteConfig.restaurantsCollectiondId,
+              order.restaurantId
+            );
+
+            // ✅ CORRECTION: Récupérer l'avatar du restaurant correctement
+            let restaurantAvatar: string | null = null;
+            if (restaurant.restaurantLogo) {
+              try {
+                // Vérifier si c'est déjà une URL complète
+                if (restaurant.restaurantLogo.startsWith('http')) {
+                  restaurantAvatar = restaurant.restaurantLogo;
+                } else {
+                  // Sinon, construire l'URL
+                  restaurantAvatar = buildFileViewUrl(restaurant.restaurantLogo);
+                }
+                console.log('🖼️ Avatar restaurant:', restaurantAvatar);
+              } catch (err) {
+                console.error(`⚠️ Erreur construction URL avatar:`, err);
+              }
+            }
+
+            // Récupérer les items de la commande
+            const itemsResponse = await databases.listDocuments<OrderItem>(
+              appwriteConfig.databaseId,
+              appwriteConfig.orderItemCollectionId,
+              [
+                Query.equal('orderId', order.$id),
+                Query.limit(100),
+              ]
+            );
+
+            // Parser et simplifier les items
+            const simplifiedItems = itemsResponse.documents.map((item) => ({
+              menuName: item.menuName,
+              quantity: item.quantity,
+              price: item.price,
+            }));
+
+            // Formater la date
+            const orderDate = formatDateRelative(order.$createdAt);
+
+            return {
+              orderId: order.$id,
+              orderDate,
+              orderCreatedAt: order.$createdAt,
+              status: order.status,
+              totalPrice: order.totalPrice,
+              restaurant: {
+                id: restaurant.$id,
+                name: restaurant.restaurantName,
+                avatar: restaurantAvatar, // ✅ Avatar correctement géré
+              },
+              items: simplifiedItems,
+              itemsCount: simplifiedItems.reduce((sum, item) => sum + item.quantity, 0),
+            } as OrderHistoryItem;
+
+          } catch (error) {
+            console.error(`❌ Erreur traitement commande ${order.$id}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filtrer les commandes null (en cas d'erreur)
+      const validOrders = ordersWithDetails.filter(Boolean) as OrderHistoryItem[];
+      console.log(`✅ ${validOrders.length} commande(s) traitée(s) avec succès`);
+      
+      return validOrders;
+    };
+
+    return getToken 
+      ? await withRetry(operation, 2, getToken)
+      : await operation();
+
+  } catch (error) {
+    console.error('❌ Erreur récupération historique commandes:', error);
+    throw error;
+  }
+};
+
+export const getUserOrdersActive = async (
+  userId: string,
+  getToken?: GetTokenFn
+): Promise<OrderHistoryItem[]> => {
+  try {
+    if (!userId) {
+      throw new Error('userId requis');
+    }
+
+    console.log('📦 Récupération historique pour userId:', userId);
+
+    const operation = async () => {
+      // 1. Récupérer les commandes avec les statuts spécifiés
+      const response = await databases.listDocuments<Order>(
+        appwriteConfig.databaseId,
+        appwriteConfig.ordersCollectionId,
+        [
+          Query.equal('userId', userId),
+          Query.or([
+            Query.equal('status', 'pending'),
+            Query.equal('status', 'accepted'),
+            Query.equal('status', 'completed'),
+            Query.equal('status', 'preparing'),
+            Query.equal('status', 'delivering')
+          ]),
+          Query.orderDesc('$createdAt'),
+          Query.limit(100),
+        ]
+      );
+
+      console.log(`✅ ${response.documents.length} commande(s) trouvée(s)`);
+
+      // 2. Pour chaque commande, enrichir avec les données restaurant et items
+      const ordersWithDetails = await Promise.all(
+        response.documents.map(async (order) => {
+          try {
+            // Récupérer les informations du restaurant
+            const restaurant = await databases.getDocument<Restaurant>(
+              appwriteConfig.databaseId,
+              appwriteConfig.restaurantsCollectiondId,
+              order.restaurantId
+            );
+
+            // ✅ CORRECTION: Récupérer l'avatar du restaurant correctement
+            let restaurantAvatar: string | null = null;
+            if (restaurant.restaurantLogo) {
+              try {
+                // Vérifier si c'est déjà une URL complète
+                if (restaurant.restaurantLogo.startsWith('http')) {
+                  restaurantAvatar = restaurant.restaurantLogo;
+                } else {
+                  // Sinon, construire l'URL
+                  restaurantAvatar = buildFileViewUrl(restaurant.restaurantLogo);
+                }
+                console.log('🖼️ Avatar restaurant:', restaurantAvatar);
+              } catch (err) {
+                console.error(`⚠️ Erreur construction URL avatar:`, err);
+              }
+            }
+
+            // Récupérer les items de la commande
+            const itemsResponse = await databases.listDocuments<OrderItem>(
+              appwriteConfig.databaseId,
+              appwriteConfig.orderItemCollectionId,
+              [
+                Query.equal('orderId', order.$id),
+                Query.limit(100),
+              ]
+            );
+
+            // Parser et simplifier les items
+            const simplifiedItems = itemsResponse.documents.map((item) => ({
+              menuName: item.menuName,
+              quantity: item.quantity,
+              price: item.price,
+            }));
+
+            // Formater la date
+            const orderDate = formatDateRelative(order.$createdAt);
+
+            return {
+              orderId: order.$id,
+              orderDate,
+              orderCreatedAt: order.$createdAt,
+              status: order.status,
+              totalPrice: order.totalPrice,
+              restaurant: {
+                id: restaurant.$id,
+                name: restaurant.restaurantName,
+                avatar: restaurantAvatar, // ✅ Avatar correctement géré
+              },
+              items: simplifiedItems,
+              itemsCount: simplifiedItems.reduce((sum, item) => sum + item.quantity, 0),
+            } as OrderHistoryItem;
+
+          } catch (error) {
+            console.error(`❌ Erreur traitement commande ${order.$id}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filtrer les commandes null (en cas d'erreur)
+      const validOrders = ordersWithDetails.filter(Boolean) as OrderHistoryItem[];
+      console.log(`✅ ${validOrders.length} commande(s) traitée(s) avec succès`);
+      
+      return validOrders;
+    };
+
+    return getToken 
+      ? await withRetry(operation, 2, getToken)
+      : await operation();
+
+  } catch (error) {
+    console.error('❌ Erreur récupération historique commandes:', error);
+    throw error;
+  }
+};
+
+export const soldOperation = async (
+  clerkUserId: string,
+  method: 'get' | 'add' | 'subtract',
+  montant?: number
+): Promise<number | void> => {
+  // Validation des paramètres
+  if (!clerkUserId) {
+    throw new Error('clerkUserId est requis')
+  }
+
+  if ((method === 'add' || method === 'subtract') && (!montant || montant <= 0)) {
+    throw new Error('Un montant valide est requis pour cette opération')
+  }
+
+  try {
+    // Récupérer le document utilisateur
+    const getUserDocument = async () => {
+
+      const response = await databases.listDocuments<UserDoc>(
+        appwriteConfig.databaseId,
+        appwriteConfig.userCollectionId,
+        [Query.equal('clerkUserId', clerkUserId)]
+      )
+
+      if (response.documents.length === 0) {
+        throw new Error('Utilisateur non trouvé')
+      }
+
+      return response.documents[0]
+    }
+
+    // Méthode GET - Récupérer le solde
+    if (method === 'get') {
+      const user = await getUserDocument()
+      return user.solde
+    }
+
+    // Méthode ADD - Ajouter au solde
+    if (method === 'add') {
+      const user = await getUserDocument()
+      const oldSolde = user.solde || 0
+      const newSolde = oldSolde + (montant as number)
+
+      // CORRECTION 2: updateDocument nécessite le documentId
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.userCollectionId,
+        user.$id, // ID du document
+        { solde: newSolde }
+      )
+
+      return newSolde
+    }
+
+    // CORRECTION 3: Méthode SUBTRACT complétée
+    if (method === 'subtract') {
+      const user = await getUserDocument()
+      const oldSolde = user.solde || 0
+      const newSolde = oldSolde - (montant as number)
+
+      // Vérification pour éviter un solde négatif (optionnel)
+      if (newSolde < 0) {
+        throw new Error('Solde insuffisant pour cette opération')
+      }
+
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.userCollectionId,
+        user.$id,
+        { solde: newSolde }
+      )
+
+      return newSolde
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'opération sur le solde:', error)
+    throw error
+  }
+}
+
+export const updateOrderPaymentStatus = async (
+  orderId: string,
+  paymentStatus: 'unpaid' | 'paid' | 'refunded',
+): Promise<void> => {
+  try {
+    if (!orderId) {
+      throw new Error('orderId est requis');
+    }
+
+    console.log(`💳 Mise à jour statut paiement pour commande ${orderId}: ${paymentStatus}`);
+
+    // 1. Récupérer la commande pour vérifier le mode de paiement
+    const order = await databases.getDocument<Order>(
+      appwriteConfig.databaseId,
+      appwriteConfig.ordersCollectionId,
+      orderId
+    );
+
+    // 2. Récupérer le clerkUserId de l'utilisateur à partir de son userId Appwrite
+    const getUserClerkId = async (appwriteUserId: string): Promise<string> => {
+      const userDoc = await databases.getDocument<UserDoc>(
+        appwriteConfig.databaseId,
+        appwriteConfig.userCollectionId,
+        appwriteUserId
+      );
+      
+      if (!userDoc.clerkUserId) {
+        throw new Error('clerkUserId non trouvé pour cet utilisateur');
+      }
+      
+      return userDoc.clerkUserId;
+    };
+
+    // 3. Si paiement par portefeuille et qu'on passe à "paid", débiter
+    if (
+      order.method === 'portefeuille' && 
+      paymentStatus === 'paid' && 
+      order.paymentStatus === 'unpaid'
+    ) {
+      console.log(`💰 Débit du portefeuille: ${order.totalPrice} F`);
+      
+      try {
+        // ✅ Récupérer le clerkUserId
+        const clerkUserId = await getUserClerkId(order.userId);
+        console.log(`👤 clerkUserId récupéré: ${clerkUserId}`);
+        
+        // ✅ Débiter avec le clerkUserId
+        const newSolde = await soldOperation(clerkUserId, 'subtract', order.totalPrice);
+        console.log(`✅ Nouveau solde: ${newSolde} F`);
+      } catch (error) {
+        console.error('❌ Erreur débit portefeuille:', error);
+        throw new Error('Solde insuffisant ou erreur de débit');
+      }
+    }
+
+    // 4. Si remboursement et que c'était payé par portefeuille, recréditer
+    if (
+      order.method === 'portefeuille' && 
+      paymentStatus === 'refunded' && 
+      order.paymentStatus === 'paid'
+    ) {
+      console.log(`💰 Remboursement du portefeuille: ${order.totalPrice} F`);
+      
+      try {
+        // ✅ Récupérer le clerkUserId
+        const clerkUserId = await getUserClerkId(order.userId);
+        console.log(`👤 clerkUserId récupéré: ${clerkUserId}`);
+        
+        // ✅ Recréditer avec le clerkUserId
+        const newSolde = await soldOperation(clerkUserId, 'add', order.totalPrice);
+        console.log(`✅ Nouveau solde après remboursement: ${newSolde} F`);
+      } catch (error) {
+        console.error('❌ Erreur remboursement:', error);
+        throw new Error('Erreur lors du remboursement');
+      }
+    }
+
+    // 5. Mettre à jour le statut de paiement dans la commande
+    await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.ordersCollectionId,
+      orderId,
+      {
+        paymentStatus: paymentStatus,
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+    console.log(`✅ Statut paiement mis à jour: ${paymentStatus}`);
+
+  } catch (error) {
+    console.error('❌ Erreur updateOrderPaymentStatus:', error);
     throw error;
   }
 };

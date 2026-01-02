@@ -7,7 +7,7 @@ import { Href,router } from 'expo-router'
 type Operation = {
     text: string,
     icone: ImageSourcePropType,
-    path: Href,
+    path?: Href,
 }
 type ServiceKey = 'zem' | 'tricycle' | 'voiture' | 'eco' | 'prestige' | 'porto' | 'heure' | 'evenement' |  'ouidah'
 type Data = {
@@ -41,6 +41,7 @@ type Data = {
     }
     const closeModal =() => {
       modalRef.current?.dismiss();
+      modalRef.current?.forceClose();
     }
     const renderBackdrop = useCallback(
       (props:any) => (
@@ -105,7 +106,12 @@ type Data = {
               paddingRight: 15,
               paddingLeft: 15,
             }}
-            onPress={()=> (router.push(item.path), closeModal())}
+              onPress={()=> {
+              if (item.path) {
+                router.push(item.path);
+                closeModal()!;
+              }
+            }}
             >
               <View className='h-[75px] flex-row items-center justify-between border-neutral-200' style={{borderBottomWidth: 1}}>
               <View className='flex-row gap-3 items-center'>

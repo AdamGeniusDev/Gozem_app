@@ -31,12 +31,22 @@ export const CalculateDistance = ({lat, lon}: Distance) => {
     return distance;
 }
 
-export const CalculatePriceFromDistance = ({distance}: {distance: number}): number => {
-    if (distance <= 3) return 1000;
-    if (distance <= 6) return 1500;
-    if (distance <= 10) return 2000;
-    if (distance <= 13) return 2500;
-    return 3000;
+export const CalculatePriceFromDistance = ({ distance }: { distance: number }): number => {
+  const basicPrice = distance * 150;
+
+  if (basicPrice < 500) return 500;
+
+  const valueConvert = basicPrice % 100;
+
+  if (valueConvert === 0 || valueConvert === 50) {
+    return basicPrice;
+  }
+
+  if (valueConvert < 50) {
+    return basicPrice - valueConvert;
+  }
+
+  return basicPrice + (100 - valueConvert);
 }
 
 export const CalculateDelaiFromDistance = ({distance}: {distance: number}): string => {
@@ -44,5 +54,7 @@ export const CalculateDelaiFromDistance = ({distance}: {distance: number}): stri
     if (distance <= 6) return '25-35';
     if (distance <= 10) return '35-40';
     if (distance <= 13) return '35-40';
+    if (distance <= 16) return '40-45';
+    if (distance <= 20) return '45-50';
     return 'Hors de portée';
 }

@@ -1,4 +1,4 @@
-import { AppState, AppStateStatus, Image, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, AppState, AppStateStatus, Image, Pressable, Text, View } from "react-native";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { images, onboarding, services } from "@/constants";
 import { useAuth } from "@clerk/clerk-expo";
@@ -11,7 +11,7 @@ import { useFavorisStore } from "@/store/favoris.store";
 import { useTranslation } from "react-i18next";
 import { Redirect, router, useFocusEffect } from "expo-router";
 import useNotificationStore from "@/store/notification.store";
-import { getRestaurants, updateExpoPushToken } from "@/lib/appwrite";
+import { getRestaurants, soldOperation, updateExpoPushToken } from "@/lib/appwrite";
 import { Coords, Restaurant } from "@/types/type";
 import useAppwrite from "@/lib/useAppwrite";
 import RestaurantCard from "@/components/RestaurantCard";
@@ -20,6 +20,11 @@ import CustomButton from "@/components/CustomButton";
 import { useNotificationCount } from "@/lib/useNotification";
 import RestaurantCardSkeleton from "@/components/RestaurantCardSkeleton";
 import { FlatList } from "react-native-gesture-handler";
+
+type SectionData = {
+  type: 'header' | 'wallet' | 'services' | 'sponsored';
+  data?: any;
+}
 
 export default function Index() {
   const { t } = useTranslation();
@@ -34,6 +39,9 @@ export default function Index() {
   const { total: numberNotification, refresh: refreshNotificationCount } = useNotificationCount();
   
   const { loadFavoris, removeFavori } = useFavorisStore();
+  const [solde,setSolde] = useState(0)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>('')
   
   const [modalAddedVisible, setModalAddedVisible] = useState(false);
   const [modalDeleteVisible, setModalDeleteVisible] = useState(false);
@@ -44,7 +52,6 @@ export default function Index() {
   const [sponsoredWithCoords, setSponsoredWithCoords] = useState<(Restaurant & { coords?: Coords | null })[]>([]);
   const [isLoadingCoords, setIsLoadingCoords] = useState(true);
 
-  // Références pour éviter les re-renders et appels multiples
   const isLoadingRef = useRef(false);
   const loadedIdsRef = useRef<string>('');
 
@@ -52,6 +59,32 @@ export default function Index() {
     if (!isLoaded || !userId) return;
     loadUser(getToken, userId);
   }, [userId, isLoaded, loadUser, getToken]);
+
+   useEffect(() => {
+          const fetchSolde = async () => {
+              if (!userId) {
+                  setLoading(false)
+                  return
+              }
+  
+              try {
+                  setLoading(true)
+                  setError('')
+                  const result = await soldOperation(userId, 'get')
+                  
+                  if (result !== undefined) {
+                      setSolde(result)
+                  }
+              } catch (err) {
+                  console.error('Erreur récupération solde:', err)
+                  setError('Impossible de récupérer le solde')
+              } finally {
+                  setLoading(false)
+              }
+          }
+  
+          fetchSolde()
+      }, [userId])
 
   useEffect(() => {
     const updateToken = async () => {
@@ -122,27 +155,28 @@ export default function Index() {
     fn: () => getRestaurants({ sponsored: 'yes' }),
   });
 
-  // Créer un identifiant stable pour les restaurants sponsorisés
-  const sponsoredIds = useMemo(() => {
-    if (!sponsored || sponsored.length === 0) return '';
-    return sponsored.map(r => r.$id).join(',');
+  // Mémorisez les données sponsored pour éviter les re-renders
+  const sponsoredData = useMemo(() => {
+    return sponsored || [];
   }, [sponsored]);
 
+  const sponsoredIds = useMemo(() => {
+    if (!sponsoredData || sponsoredData.length === 0) return '';
+    return sponsoredData.map(r => r.$id).join(',');
+  }, [sponsoredData]);
+
   useEffect(() => {
-    // Si pas de restaurants sponsorisés
-    if (!sponsored || sponsored.length === 0) {
+    if (!sponsoredData || sponsoredData.length === 0) {
       setIsLoadingCoords(false);
       setSponsoredWithCoords([]);
       loadedIdsRef.current = '';
       return;
     }
 
-    // Si les IDs n'ont pas changé, on ne recharge pas
     if (loadedIdsRef.current === sponsoredIds) {
       return;
     }
 
-    // Si un chargement est déjà en cours, on attend
     if (isLoadingRef.current) {
       return;
     }
@@ -153,22 +187,23 @@ export default function Index() {
       
       try {
         const restaurantsWithCoords = await Promise.all(
-          sponsored.map(async (restaurant) => {
+          sponsoredData.map(async (restaurant) => {
             try {
               const coords = await convertAddress({ address: restaurant.address });
               return { ...restaurant, coords } as Restaurant & { coords: Coords };
             } catch (error) {
-              console.log(`Erreur conversion adresse pour ${restaurant.restaurantName}:`, error);
+              console.log(`❌ Erreur conversion adresse pour ${restaurant.restaurantName}:`, error);
               return { ...restaurant, coords: null } as Restaurant & { coords: null };
             }
           })
         );
 
+        console.log('✅ Restaurants avec coords chargés:', restaurantsWithCoords.length);
         setSponsoredWithCoords(restaurantsWithCoords);
         loadedIdsRef.current = sponsoredIds;
       } catch (error) {
-        console.error('Erreur préchargement coordonnées:', error);
-        setSponsoredWithCoords(sponsored.map(r => ({ ...r, coords: null })));
+        console.error('❌ Erreur préchargement coordonnées:', error);
+        setSponsoredWithCoords(sponsoredData.map(r => ({ ...r, coords: null })));
       } finally {
         setIsLoadingCoords(false);
         isLoadingRef.current = false;
@@ -176,7 +211,7 @@ export default function Index() {
     };
 
     preloadCoordinates();
-  }, [sponsoredIds]); // Ne dépend que de sponsoredIds
+  }, [sponsoredIds, sponsoredData, convertAddress]);
 
   const handleChangeFavori = useCallback(async (action: 'added' | 'removeRequest', item?: Restaurant) => {
     if (action === 'added' && item) {
@@ -221,30 +256,174 @@ export default function Index() {
     []
   );
 
-  // Mémoriser les renderers pour éviter les re-renders
-  const renderServiceItem = useCallback(({ item }: { item: typeof services[0] }) => (
-    <ServiceModal data={item} />
-  ), []);
-
-  const renderSponsoredItem = useCallback(({ item }: { item: Restaurant & { coords?: Coords | null } }) => (
-    <View style={{ width: 300 }}>
-      <RestaurantCard
-        item={item}
-        onFavoriChange={handleChangeFavori}
-        preloadedCoords={item.coords}
-      />
-    </View>
-  ), [handleChangeFavori]);
-
-  const renderSkeletonItem = useCallback(() => (
-    <View style={{ width: 300 }}>
-      <RestaurantCardSkeleton />
+  // Renderer pour la section header
+  const renderHeader = useCallback(() => (
+    <View className='px-5 w-full mb-5'>
+      <View className='w-full' style={{ height: 180, marginTop: 80, marginBottom: 20 }}>
+        <Image source={onboarding.image} className='h-full w-full rounded-lg' resizeMode='cover' />
+      </View>
     </View>
   ), []);
 
-  const keyExtractor = useCallback((item: any) => String(item.id), []);
-  const sponsoredKeyExtractor = useCallback((item: Restaurant, index: number) => `${item.$id}-${index}`, []);
-  const skeletonKeyExtractor = useCallback((_: any, index: number) => `skeleton-${index}`, []);
+  // Renderer pour la section wallet
+const renderWallet = useCallback(() => (
+  <View className='px-5 w-full mb-5'>
+    <View className='w-full rounded-lg' style={{ height: 80, overflow: 'hidden' }}>
+      <Image source={images.porgozem} className='w-full h-full' resizeMode="cover" resizeMethod="resize" />
+      <View className="w-full absolute px-5 py-3 flex-row justify-between items-center">
+        <View>
+          <View className='flex-row gap-2 items-center'>
+            <Image 
+              source={images.portefeuille} 
+              className='w-[15px] h-[15px]' 
+              resizeMode='contain' 
+              tintColor={'#FFFFFF'}
+            />
+            <Text className='text-white font-regular text-[12px]'>{t('home.walletTitle')}</Text>
+          </View>
+          
+          {/* Gestion du chargement du solde */}
+          {loading ? (
+            <View className='flex-row items-center gap-x-2'>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Text className='font-regular text-white text-[14px]'>Chargement...</Text>
+            </View>
+          ) : error ? (
+            <Text className='font-regular text-white text-[12px]'>Erreur</Text>
+          ) : (
+            <Text className='font-poppins-bold text-[22px] text-white'>
+              {solde.toLocaleString('fr-FR')}<Text className='ml-3 text-[18px]'>F</Text>
+            </Text>
+          )}
+        </View>
+        
+        <Pressable 
+          className='w-[45px] h-[45px] rounded-full bg-white items-center justify-center' 
+          onPress={() => router.push('/(services)/depot')}
+          disabled={loading} // Désactiver pendant le chargement
+        >
+          <Image source={images.plus} style={{ width: '60%', height: '60%' }} />
+        </Pressable>
+      </View>
+    </View>
+  </View>
+), [t, solde, loading, error]);
+
+  const renderServices = useCallback((servicesData: typeof services) => (
+    <View className='px-5 w-full mb-5'>
+      <View className='flex-row flex-wrap justify-between' style={{ rowGap: 16 }}>
+        {servicesData.map((service) => (
+          <View key={service.id} style={{ width: '22%' }}>
+            <ServiceModal data={service} />
+          </View>
+        ))}
+      </View>
+    </View>
+  ), []);
+
+  // Renderer pour la section sponsored
+  const renderSponsored = useCallback((restaurants: (Restaurant & { coords?: Coords | null })[]) => {
+    return (
+      <View
+        className='pl-3 py-5 mt-5'
+        style={{
+          backgroundColor: '#dc2626',
+          minHeight: 400
+        }}
+      >
+        <Text
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          className='font-poppins-bold text-white text-[20px]'
+        >
+          Profitez d'incroyables plats💥
+        </Text>
+        <Text className='font-regular text-white text-[15px] mb-5'>
+          {t('home.freeDeliverySubtitle')}
+        </Text>
+
+        {isLoadingCoords ? (
+          <FlatList
+            data={[1, 2]}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ columnGap: 15, paddingBottom: 20, paddingRight: 10 }}
+            keyExtractor={(_, index) => `skeleton-${index}`}
+            renderItem={() => (
+              <View style={{ width: 300 }}>
+                <RestaurantCardSkeleton />
+              </View>
+            )}
+          />
+        ) : restaurants && restaurants.length > 0 ? (
+          <>
+            <FlatList
+              data={restaurants}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ columnGap: 15, paddingBottom: 20, paddingRight: 10 }}
+              keyExtractor={(item, index) => `${item.$id}-${index}`}
+              removeClippedSubviews={false}
+              initialNumToRender={2}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+              renderItem={({ item, index }) => {
+                return (
+                  <View style={{ width: 300}}>
+                    <RestaurantCard
+                      item={item}
+                      onFavoriChange={handleChangeFavori}
+                      preloadedCoords={item.coords}
+                    />
+                  </View>
+                );
+              }}
+              ListEmptyComponent={() => (
+                <Text className='text-white'>Liste vide!</Text>
+              )}
+            />
+          </>
+        ) : (
+          <View className='items-center justify-center py-10'>
+            <Text className='text-white text-[14px]'>
+              Aucun restaurant sponsorisé pour le moment
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }, [isLoadingCoords, handleChangeFavori, t]);
+
+  // Créer les sections pour la FlatList principale
+  const sections = useMemo(() => {
+    const items: SectionData[] = [];
+    
+    items.push({ type: 'header' });
+    items.push({ type: 'wallet' });
+    items.push({ type: 'services', data: services });
+    
+    // Toujours afficher la section sponsored si on charge ou si on a des données
+    if (isLoadingCoords || sponsoredWithCoords.length > 0 || sponsoredData.length > 0) {
+      items.push({ type: 'sponsored', data: sponsoredWithCoords });
+    } 
+    return items;
+  }, [sponsoredWithCoords, isLoadingCoords, sponsoredData]);
+
+  // Renderer principal pour les sections
+  const renderSection = useCallback(({ item }: { item: SectionData }) => {
+    switch (item.type) {
+      case 'header':
+        return renderHeader();
+      case 'wallet':
+        return renderWallet();
+      case 'services':
+        return renderServices(item.data);
+      case 'sponsored':
+        return renderSponsored(item.data);
+      default:
+        return null;
+    }
+  }, [renderHeader, renderWallet, renderServices, renderSponsored]);
 
   if (!isSignedIn) return <Redirect href='/' />;
 
@@ -256,6 +435,7 @@ export default function Index() {
     >
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-white">
         <View className='w-full h-full'>
+          {/* Header fixe */}
           <View className='home_header' style={{ zIndex: 100 }}>
             <Image 
               source={avatar ? avatar : images.utilisateur} 
@@ -273,7 +453,7 @@ export default function Index() {
               className='rounded-full bg-white w-14 h-14 flex items-center justify-center' 
               style={{ elevation: 5 }}
             >
-              <Image source={images.cloche} className='size-7' resizeMode="contain" />
+              <Image source={images.cloche} className='size-8' resizeMode="contain" />
               {numberNotification > 0 && (
                 <View className='home_notif'>
                   <Text className='font-medium text-white text-[10px] text-center'>
@@ -284,94 +464,18 @@ export default function Index() {
             </Pressable>
           </View>
 
+          {/* FlatList principale avec toutes les sections */}
           <FlatList
-            numColumns={4}
-            data={services}
-            className='flex-1'
-            keyExtractor={keyExtractor}
-            renderItem={renderServiceItem}
-            columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 10 }}
-            contentContainerStyle={{ paddingTop: 10, rowGap: 16 }}
-            ListHeaderComponent={() => (
-              <View className='px-5 w-full mb-5'>
-                <View className='w-full' style={{ height: 180, marginTop: 80, marginBottom: 20 }}>
-                  <Image source={onboarding.image} className='h-full w-full rounded-lg' resizeMode='cover' />
-                </View>
-                
-                <View className='w-full rounded-lg mt-3' style={{ height: 80, overflow: 'hidden' }}>
-                  <Image source={images.porgozem} className='w-full h-full' resizeMode="cover" resizeMethod="resize" />
-                  <View className="w-full absolute px-5 py-3 flex-row justify-between items-center">
-                    <View>
-                      <View className='flex-row gap-2 items-center'>
-                        <Image 
-                          source={images.portefeuille} 
-                          className='w-[15px] h-[15px]' 
-                          resizeMode='contain' 
-                          tintColor={'#FFFFFF'}
-                        />
-                        <Text className='text-white font-regular text-[12px]'>{t('home.walletTitle')}</Text>
-                      </View>
-                      <Text className='font-poppins-bold text-[22px] text-white'>
-                        0<Text className='ml-3 text-[18px]'>F</Text>
-                      </Text>
-                    </View>
-                    <Pressable className='w-[45px] h-[45px] rounded-full bg-white items-center justify-center'>
-                      <Image source={images.plus} style={{ width: '60%', height: '60%' }} />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListFooterComponent={() => (
-              <View
-                className='pl-3 py-5 mt-5'
-                style={{
-                  backgroundColor: '#dc2626',
-                  height: 400
-                }}
-              >
-                <Text
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                  className='font-poppins-bold text-white text-[20px]'
-                >
-                  Profitez d'incroyables plats💥
-                </Text>
-                <Text className='font-regular text-white text-[15px] mb-5'>
-                  {t('home.freeDeliverySubtitle')}
-                </Text>
-
-                {/* Afficher le skeleton pendant le chargement */}
-                {isLoadingCoords ? (
-                  <FlatList
-                    data={[1, 2]}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ columnGap: 15, paddingBottom: 20, paddingRight: 10 }}
-                    keyExtractor={skeletonKeyExtractor}
-                    renderItem={renderSkeletonItem}
-                  />
-                ) : sponsoredWithCoords.length > 0 ? (
-                  <FlatList
-                    data={sponsoredWithCoords}
-                    className='flex-1'
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ columnGap: 15, paddingBottom: 20, paddingRight: 10 }}
-                    horizontal
-                    keyExtractor={sponsoredKeyExtractor}
-                    removeClippedSubviews={false}
-                    initialNumToRender={2}
-                    maxToRenderPerBatch={2}
-                    windowSize={3}
-                    renderItem={renderSponsoredItem}
-                  />
-                ) : null}
-              </View>
-            )}
+            data={sections}
+            keyExtractor={(item, index) => `${item.type}-${index}`}
+            renderItem={renderSection}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: 20 }}
           />
         </View>
       </SafeAreaView>
 
+      {/* Modales de confirmation */}
       {modalAddedVisible && (
         <View
           className='absolute items-center justify-center bottom-10 right-3 left-3 self-center bg-primary-300 px-4 py-2 rounded-lg'
@@ -394,15 +498,13 @@ export default function Index() {
         </View>
       )}
 
+      {/* Bottom Sheet Modal */}
       <BottomSheetModal
         ref={modalPendingRemoveItem}
         snapPoints={['45%']}
         handleIndicatorStyle={{ display: 'none' }}
         enablePanDownToClose={false}
         enableDynamicSizing={false}
-        enableBlurKeyboardOnGesture={false}
-        enableHandlePanningGesture={false}
-        enableContentPanningGesture={false}
         backdropComponent={renderBackdrop}
       >
         <BottomSheetView className='p-4 bg-white'>
@@ -413,8 +515,8 @@ export default function Index() {
                 overflow: 'hidden',
                 height: 75,
                 width: 75,
-                borderEndWidth: 2,
-                borderBottomColor: '#e5e5e5'
+                borderWidth: 2,
+                borderColor: '#e5e5e5'
               }}
             >
               <Image

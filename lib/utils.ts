@@ -1,7 +1,11 @@
-export const getTimeFromDate = (date: string | Date): string => {
+export const getTimeFromDate = (date: string | Date, addMinutes: number = 0): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
   if (isNaN(dateObj.getTime())) return '00:00';
+
+  if (addMinutes !== 0) {
+    dateObj.setMinutes(dateObj.getMinutes() + addMinutes);
+  }
 
   const hours = dateObj.getHours().toString().padStart(2, '0');
   const minutes = dateObj.getMinutes().toString().padStart(2, '0');
@@ -57,4 +61,43 @@ export const isRestaurantOpen = (
 const timeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+};
+
+export const formatDate = (date: string | Date, locale: string = 'fr-FR'): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  if (isNaN(dateObj.getTime())) return '';
+
+  const options: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+
+  return dateObj.toLocaleDateString(locale, options);
+};
+
+export const formatDateRelative = (date: string | Date): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return '';
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Comparer uniquement les dates (sans l'heure)
+  const isSameDay = (d1: Date, d2: Date) => 
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear();
+
+  if (isSameDay(dateObj, today)) {
+    return "Aujourd'hui";
+  }
+
+  if (isSameDay(dateObj, yesterday)) {
+    return "Hier";
+  }
+
+  return formatDate(dateObj);
 };

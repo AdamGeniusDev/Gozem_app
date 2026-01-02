@@ -88,6 +88,20 @@ import whats from '../assets/images/whatsapp.png';
 import zem from '../assets/images/zem.png';
 import facture from '../assets/images/facture.png';
 import placeholder from '../assets/images/placeholder.jpg';
+import plat from '../assets/images/plat.png';
+import dorder from '../assets/images/draw_order.png';
+import dready from '../assets/images/draw_ready.jpg';
+import dcook from '../assets/images/draw_cook.png';
+import ddelivering from '../assets/images/draw_delivering.png';
+import ddelivered from '../assets/images/delivered.png';
+import drejected from '../assets/images/draw_rejected.png';
+import dcanceled from '../assets/images/draw_canceled.png';
+import rejected from '../assets/images/rejected.png';
+import espece from '../assets/images/espece.png';
+import iportefeuille from '../assets/images/iportefeuille.png';
+
+
+import { Data } from '@/types/type';
 
 
 
@@ -153,7 +167,7 @@ export const onboarding =
   };
 
 
-export const services = [
+export const services : Data[]= [
   {
     "id":1,
     "title": 'Back to School',
@@ -362,4 +376,37 @@ export const images ={
     boutique,
     facture,
     placeholder,
+    plat,
+    dcook,
+    dorder,
+    dready,
+    ddelivering,
+    ddelivered,
+    drejected,
+    dcanceled,
+    repas,
+    rejected,
+    espece,
+    iportefeuille
 };
+
+export const reasons = [
+  {
+    main: "Temps d'acceptation trop long"
+  },
+  {
+    main: "J'ai fait une erreur sur la commande"
+  },
+  {
+    main: "Je dois me déplacer"
+  },
+  {
+    main: "J'ai changé d'avis"
+  },
+  {
+    main: "L'agent support Gozem n'est pas courtois"
+  },
+  {
+    main: "Autre"
+  }
+]

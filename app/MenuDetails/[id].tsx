@@ -99,11 +99,18 @@ const MenuDetails = () => {
     [selectedSupplements]
   );
 
-  const price = useMemo(() => {
-    if (!menu?.normalPrice) return 0;
-    const basePrice = menu.normalPrice === menu.reductionPrice ? menu.normalPrice : menu.reductionPrice;
-    return basePrice * count + supplementPrice;
-  }, [menu?.normalPrice, menu?.reductionPrice, count, supplementPrice]);
+  const basePrice = useMemo(() => {
+  if (!menu?.normalPrice) return 0;
+  
+  return menu.normalPrice === menu.reductionPrice 
+    ? menu.normalPrice 
+    : menu.reductionPrice;
+}, [menu?.normalPrice, menu?.reductionPrice]);
+
+const price = useMemo(() => {
+  return (basePrice + supplementPrice) * count;
+}, [basePrice, supplementPrice, count]);
+
 
   const isButtonDisabled = useMemo(() => {
 

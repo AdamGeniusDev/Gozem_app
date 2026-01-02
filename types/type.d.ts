@@ -46,6 +46,8 @@ export interface UserDoc extends Models.Document {
   gender?: string;
   avatarId?: string;
   date?: string;
+  token?: string;
+  solde?: number;
 };
 
 export interface GetMenu {
@@ -160,34 +162,43 @@ export interface CartStore {
   getRestaurantIds: () => string[];
 }
 
-interface Order extends Models.Document {
-  restaurantId: string,
-  userId: string,
-  subtotalPrice: number,
-  totalPrice: number,
-  status: pending | accepted | rejected | completed | preparing | delivering | delivered,
-  totalItems: number,
-  merchantId: string,
-  paymentStatus: paid | unpaid | refunded,
-  deliveryAddress: string,
+export interface Order extends Models.Document {
+  restaurantId: string;
+  userId: string;
+  subtotalPrice: number;
+  totalPrice: number;
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'preparing' | 'delivering' | 'delivered' | 'canceled'; // ✅ Ajouter les quotes
+  totalItems: number;
+  merchantId: string;
+  paymentStatus: 'paid' | 'unpaid' | 'refunded'; 
+  deliveryAddress: string;
+  deliveryInstruction?: string;
+  championId?: string;
+  livreurNotified?: boolean;
+  method?: 'espece' | 'portefeuille'
 }
 
-interface OrderItem extends Models.Document {
-  orderId: string,
-  menuId: string,
-  menuName: string,
-  restaurantId: string,
-  price: number,
-  quantity: number,
-  customizations?: string,
-  deliveryInstructions?: string,
-  livraisonInstructions?: string,
 
+export interface OrderItem extends Models.Document {
+  orderId: string;
+  menuId: string;
+  menuName: string;
+  restaurantId: string;
+  price: number;
+  quantity: number;
+  customizations?: string; 
+  livraisonInstructions?: string;
 }
 
+export interface OrderItemApp extends Omit<OrderItem, 'customizations'> {
+  customizations: CustomizationType[]; 
+}
+export interface OrderWithItemsApp extends Order {
+  items: OrderItemApp[];
+}
 export type CreateOrderData = Omit<Order, keyof Models.Document>;
 
-export type CreateOrderItemData = Omit<OrderItem, keyof Models.Document,oderId>;
+export type CreateOrderItemData = Omit<OrderItem, keyof Models.Document, 'oderId'>;
 
 interface Notification extends Models.Document {
   title: string;
@@ -197,3 +208,37 @@ interface Notification extends Models.Document {
   type: 'private' | 'global';
   userId: string;
 }
+
+export type Operation = {
+    text: string,
+    icone: ImageSourcePropType,
+    path?: Href,
+}
+export type ServiceKey = 'zem' | 'tricycle' | 'voiture' | 'eco' | 'prestige' | 'porto' | 'heure' | 'evenement' |  'ouidah'
+export type Data = {
+    id: number,
+    title: string,
+    nop: number,
+    operation: Operation[],
+    image: ImageSourcePropType,
+    link?: ServiceKey,
+  }
+
+  export type OrderHistoryItem = {
+  orderId: string;
+  orderDate: string;
+  orderCreatedAt: string;
+  status: 'rejected' | 'canceled' | 'delivered';
+  totalPrice: number;
+  restaurant: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  items: {
+    menuName: string;
+    quantity: number;
+    price: number;
+  }[];
+  itemsCount: number;
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
 import { useSignIn, isClerkAPIResponseError, useAuth } from '@clerk/clerk-expo';
 import { router } from 'expo-router';

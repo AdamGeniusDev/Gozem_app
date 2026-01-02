@@ -1,5 +1,5 @@
 import { View, Text, Pressable, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { images } from '@/constants'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'

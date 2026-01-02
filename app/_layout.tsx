@@ -14,6 +14,7 @@ import * as Sentry from '@sentry/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/i18n/index';
 import { useCartInitialization } from "@/hooks/useCartInitialization";
+import { KkiapayProvider } from '@kkiapay-org/react-native-sdk';
 
 Sentry.init({
   dsn: 'https://2ed88e3bf6e402259453c5e5c0330312@o4509044325744640.ingest.de.sentry.io/4509982614814800',
@@ -88,6 +89,7 @@ export default Sentry.wrap(function RootLayout() {
   return (
     //bottomSheetModalProvider ici c'est dans le cas ou je voudrais utiliser un bottom sheet modal
     <ClerkProvider tokenCache={tokenCache}>
+      <KkiapayProvider>
       <GestureHandlerRootView style={{flex: 1}}>
         <SafeAreaProvider>
           <BottomSheetModalProvider>
@@ -95,6 +97,7 @@ export default Sentry.wrap(function RootLayout() {
           </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
+      </KkiapayProvider>
     </ClerkProvider>
   );
 });

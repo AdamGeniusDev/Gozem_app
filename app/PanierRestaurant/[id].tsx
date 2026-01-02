@@ -63,6 +63,7 @@ const PanierRestaurant = () => {
   const confirmerViderPanier = () => {
     clearCart(id as string);
     modalDeletePanier.current?.dismiss();
+    modalDeletePanier.current?.forceClose();
     router.back();
   };
 
@@ -143,13 +144,16 @@ const PanierRestaurant = () => {
           }}
           keyExtractor={(item, index) => `${item.$id}-${index}-${JSON.stringify(item.customizations)}`}
           renderItem={({ item }) => {
+              const basePrice = item.normalPrice === item.reductionPrice 
+                              ? item.normalPrice 
+                              : item.reductionPrice;
             const hasAccompagnement = item.customizations?.some((c: any) => c.accompagnement);
             const supplements = item.customizations?.filter((c: any) => !c.accompagnement) || [];
-            const supplementsPrice = item.customizations?.reduce(
+            const supplementsPrice = supplements.reduce(
               (sum: number, c: any) => sum + (c.price * c.quantity),
               0
-            ) || 0;
-            const itemTotalPrice = (item.normalPrice + supplementsPrice) * item.quantity;
+            );
+            const itemTotalPrice = (basePrice + supplementsPrice) * item.quantity;
 
             return (
               <Pressable 
@@ -157,7 +161,7 @@ const PanierRestaurant = () => {
                 style={{ borderBottomWidth: 1, paddingBottom: 15, marginBottom: 15 }}
                 onPress={() => {
                   
-                  router.push({
+                  router.replace({
                     pathname: `/MenuDetails/${item.$id}` as any,
                     params: {
                       editMode: 'true',
@@ -279,7 +283,7 @@ const PanierRestaurant = () => {
           <Text className='font-poppins-bold text-primary-400 text-[18px]'>{totalPrice} F</Text>
         </View>
 
-        <Pressable className='rounded-full bg-primary-400 py-4 mb-5 mt-2' onPress={() => router.push(`/FinalPanier/${id}`)}>
+        <Pressable className='rounded-full bg-primary-400 py-4 mb-5 mt-2' onPress={() => router.replace(`/FinalPanier/${id}`)}>
           <Text className='font-semibold text-[15px] text-center text-white'>
             Finaliser la commande
           </Text>

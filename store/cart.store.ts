@@ -262,20 +262,23 @@ export const UseCartStore = create<CartStore>()(
         return get()
           .items.filter((i) => i.restaurantId === restaurantId)
           .reduce((total, item) => {
+            
             const basePrice = item.normalPrice === item.reductionPrice 
               ? item.normalPrice 
               : item.reductionPrice;
 
-            const customPrice =
-              item.customizations?.reduce(
-                (sum, c) => sum + c.price * c.quantity,
-                0
-              ) ?? 0;
             
-            return total + item.quantity * (basePrice + customPrice);
+            const customPrice = item.customizations?.reduce(
+              (sum, c) => sum + c.price * c.quantity,
+              0
+            ) ?? 0;
+            
+            
+            const itemTotal = (basePrice + customPrice) * item.quantity;
+            
+            return total + itemTotal;
           }, 0);
       },
-
       getCartCount: () => {
         const restaurantIds = new Set(
           get().items.map((item) => item.restaurantId)
