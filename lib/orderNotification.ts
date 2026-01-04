@@ -115,3 +115,37 @@ export const notifyClientOrderPlaced = async (
     orderId,
   });
 };
+
+export const notifyNewMessage = async (
+  recipientId: string,
+  senderName: string,
+  messageContent: string,
+  conversationId: string,
+  type: 'champion' | 'support'
+) => {
+  try {
+    const title = `💬 ${senderName}`;
+    const body = messageContent.length > 50 
+      ? `${messageContent.substring(0, 50)}...` 
+      : messageContent;
+
+      let link = ``;
+    
+      if( type === 'champion'){
+         link = `/ChampionChat/${conversationId}`; 
+      } else if(type === 'support'){
+         link =`/SupportChat/${conversationId}`
+      }
+    
+
+    await sendCompleteNotification(recipientId, title, body, link, {
+      type: 'new_message',
+      conversationId,
+      senderId: recipientId,
+    });
+
+    console.log(`✅ Notification message envoyée à ${recipientId}`);
+  } catch (error) {
+    console.error('❌ Erreur notification message:', error);
+  }
+};

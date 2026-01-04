@@ -28,6 +28,9 @@ export const appwriteConfig = {
     ordersCollectionId: '693da806001a7509fd47',
     orderItemCollectionId: '6915b1a4000a72b940f9',
     notificationCollectionId: '69175f570038aeb16477',
+    conversationCollectionId: '69577335000ac9c5eeb3',
+    conversationUsersCollectionId: '695773940023d8ad7dc3',
+    messagesCollectionId: '69577406000611819238'
 };
 
 export const client = new Client();
@@ -1801,3 +1804,182 @@ export const updateOrderPaymentStatus = async (
     throw error;
   }
 };
+
+export const createConversation = async (user1Id: string, user2Id: string) => {
+  try {
+    // 1. Validation
+    if (!user1Id || !user2Id) {
+      throw new Error('user1Id et user2Id sont requis');
+    }
+
+    // 2. Vérifier si une conversation existe déjà entre ces deux utilisateurs
+    const existingConversations = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.conversationUsersCollectionId,
+      [Query.equal('userId', user1Id)]
+    );
+
+    // Filtrer pour trouver une conversation commune
+    for (const convUser of existingConversations.documents) {
+      const otherUsers = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.conversationUsersCollectionId,
+        [
+          Query.equal('conversationId', convUser.conversationId),
+          Query.equal('userId', user2Id)
+        ]
+      );
+
+      if (otherUsers.documents.length > 0) {
+        console.log('✅ Conversation existante trouvée:', convUser.conversationId);
+        return convUser.conversationId; // Retourner la conversation existante
+      }
+    }
+
+    // 3. Créer une nouvelle conversation
+    console.log('📝 Création nouvelle conversation...');
+    
+    const conversation = await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.conversationCollectionId,
+      ID.unique(), // ✅ Ajouter l'ID unique
+      {
+        type: 'private'
+      }
+    );
+
+    const conversationId = conversation.$id;
+    console.log('✅ Conversation créée:', conversationId);
+
+    // 4. Créer les entrées conversation_users pour les deux utilisateurs
+    const users = [user1Id, user2Id];
+
+    await Promise.all(
+      users.map(async (userId) => {
+        try {
+          await databases.createDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.conversationUsersCollectionId,
+            ID.unique(), // ✅ Ajouter l'ID unique
+            {
+              conversationId: conversationId,
+              userId: userId
+            }
+          );
+          console.log(`✅ User ${userId} ajouté à la conversation`);
+        } catch (error) {
+          console.error(`❌ Erreur ajout user ${userId}:`, error);
+          throw error;
+        }
+      })
+    );
+
+    console.log('✅ Conversation créée avec succès');
+    return conversationId;
+
+  } catch (error) {
+    console.error('❌ Erreur createConversation:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (
+  conversationId: string,
+  content: string,
+  senderId: string,
+  type: 'champion' | 'support'
+) => {
+  try {
+    if (!conversationId || !content || !senderId) {
+      throw new Error('conversationId, content et senderId sont requis');
+    }
+
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      throw new Error('Le message ne peut pas être vide');
+    }
+
+    const message = await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.messagesCollectionId,
+      ID.unique(),
+      {
+        conversationId: conversationId,
+        content: trimmedContent,
+        sender_id: senderId,
+        type:type 
+      }
+    );
+
+    console.log('✅ Message envoyé:', message.$id);
+
+    const conversationUsers = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.conversationUsersCollectionId,
+      [
+        Query.equal('conversationId', conversationId),
+        Query.notEqual('userId', senderId) 
+      ]
+    );
+
+    const senderDoc = await databases.getDocument<UserDoc>(
+      appwriteConfig.databaseId,
+      appwriteConfig.userCollectionId,
+      senderId
+    );
+
+    const senderName = senderDoc.name || 'Utilisateur';
+
+    const notificationPromises = conversationUsers.documents.map(async (convUser) => {
+      try {
+        const recipientId = convUser.userId;
+        
+        // Importer la fonction depuis orderNotification
+        const { notifyNewMessage } = await import('./orderNotification');
+        
+        await notifyNewMessage(
+          recipientId,
+          senderName,
+          trimmedContent,
+          conversationId,
+          type
+        );
+        
+        console.log(`✅ Notification envoyée à ${recipientId}`);
+      } catch (error) {
+        console.error(`❌ Erreur notification pour ${convUser.userId}:`, error);
+      }
+    });
+
+    Promise.all(notificationPromises).catch(console.error);
+
+    return message;
+
+  } catch (error) {
+    console.error('❌ Erreur sendMessage:', error);
+    throw error;
+  }
+};
+
+export const getConversationMessages = async (
+  conversationId: string,
+  limit: number = 50
+) => {
+  try {
+    const response = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.messagesCollectionId,
+      [
+        Query.equal('conversationId', conversationId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(limit)
+      ]
+    );
+
+    return response.documents.reverse(); 
+  } catch (error) {
+    console.error('❌ Erreur getConversationMessages:', error);
+    throw error;
+  }
+};
+  

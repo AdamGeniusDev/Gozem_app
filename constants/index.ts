@@ -99,6 +99,9 @@ import dcanceled from '../assets/images/draw_canceled.png';
 import rejected from '../assets/images/rejected.png';
 import espece from '../assets/images/espece.png';
 import iportefeuille from '../assets/images/iportefeuille.png';
+import send from '../assets/images/send.png';
+import wifi from '../assets/images/wifi.png'
+
 
 
 import { Data } from '@/types/type';
@@ -387,7 +390,9 @@ export const images ={
     repas,
     rejected,
     espece,
-    iportefeuille
+    iportefeuille,
+    send,
+    wifi,
 };
 
 export const reasons = [

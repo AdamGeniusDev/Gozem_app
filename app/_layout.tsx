@@ -2,10 +2,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import './global.css';
 import 'react-native-reanimated';
 import { SplashScreen, Stack } from "expo-router";
-import {useFonts} from 'expo-font';
+import { useFonts } from 'expo-font';
 import { useCallback, useEffect } from "react";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import {ClerkProvider} from '@clerk/clerk-expo';
+import { ClerkProvider } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { Text, View } from 'react-native';
 import LottieView from 'lottie-react-native';
@@ -15,30 +15,39 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/i18n/index';
 import { useCartInitialization } from "@/hooks/useCartInitialization";
 import { KkiapayProvider } from '@kkiapay-org/react-native-sdk';
+import { OfflineScreen } from '@/components/OfflineScreen';
+import { useNetworkStatus } from "@/lib/useNetworkStatus";
 
 Sentry.init({
   dsn: 'https://2ed88e3bf6e402259453c5e5c0330312@o4509044325744640.ingest.de.sentry.io/4509982614814800',
-
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
   sendDefaultPii: true,
-
-  // Configure Session Replay
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1,
   integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
 });
 
-export default Sentry.wrap(function RootLayout() {
-
+// ✅ Composant séparé pour la vérification réseau (à l'intérieur des providers)
+function AppContent() {
   useCartInitialization();
+  const { isOnline } = useNetworkStatus();
 
-  SplashScreen.preventAutoHideAsync().catch(()=>{})
+  // Si pas de connexion, afficher l'écran offline
+  if (isOnline === false) {
+    return <OfflineScreen />;
+  }
 
-  const [fontLoaded,error] = useFonts({
+  // App normale avec connexion
+  return (
+    <BottomSheetModalProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </BottomSheetModalProvider>
+  );
+}
+
+export default Sentry.wrap(function RootLayout() {
+  SplashScreen.preventAutoHideAsync().catch(() => {})
+
+  const [fontLoaded, error] = useFonts({
     "Black": require("../assets/fonts/black.otf"),
     "Bold": require("../assets/fonts/bold.otf"),
     "Cursive": require("../assets/fonts/cursive.ttf"),
@@ -52,51 +61,45 @@ export default Sentry.wrap(function RootLayout() {
     "PoppinsBold": require("../assets/fonts/poppins-bold.ttf"),
   })
 
-  useEffect(()=>{
-    if(error) throw error;
-  },[error]);
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
 
-   const onLoaderLayout = useCallback(async () => {
-    // on cache le splash dès que le Loader React est visible
+  const onLoaderLayout = useCallback(async () => {
     try {
       await SplashScreen.hideAsync();
     } catch {}
   }, []);
 
-  if(!fontLoaded){
+  // Écran de chargement des fonts
+  if (!fontLoaded) {
     return (
-     <View
-     onLayout={onLoaderLayout}
-     style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}
+      <View
+        onLayout={onLoaderLayout}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}
       >
-                {/* Lottie */}
-                <LottieView
-                  source={loaders.loader}   // ex: require('../assets/anim/Cosmos.json')
-                  autoPlay
-                  loop
-                  style={{ width: 96, height: 96 }}
-                />
-                <Text className="font-medium mt-3 text-neutral-700 text-[15px]">Chargement...</Text>
-                {/* Fallback si Lottie met du temps à se charger
-                <ActivityIndicator size="large" />
-                */}
-                
-              </View>
+        <LottieView
+          source={loaders.loader}
+          autoPlay
+          loop
+          style={{ width: 96, height: 96 }}
+        />
+        <Text className="font-medium mt-3 text-neutral-700 text-[15px]">
+          Chargement...
+        </Text>
+      </View>
     )
   }
 
-  
+  // ✅ Providers puis AppContent (qui gère le réseau)
   return (
-    //bottomSheetModalProvider ici c'est dans le cas ou je voudrais utiliser un bottom sheet modal
     <ClerkProvider tokenCache={tokenCache}>
       <KkiapayProvider>
-      <GestureHandlerRootView style={{flex: 1}}>
-        <SafeAreaProvider>
-          <BottomSheetModalProvider>
-            <Stack screenOptions={{headerShown: false}} />
-          </BottomSheetModalProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <AppContent />
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
       </KkiapayProvider>
     </ClerkProvider>
   );

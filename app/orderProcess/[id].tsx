@@ -1,5 +1,5 @@
 import { images, reasons } from '@/constants'
-import { getOrder, updateOrder, updateOrderNotificationStatus } from '@/lib/appwrite'
+import { createConversation, getOrder, updateOrder, updateOrderNotificationStatus } from '@/lib/appwrite'
 import { sendCompleteNotification } from '@/lib/orderNotification'
 import useAppwrite from '@/lib/useAppwrite'
 import { useRealtimeOrderStatus } from '@/lib/useRealtimeOrder'
@@ -8,7 +8,7 @@ import { useUserStore } from '@/store/user.store'
 import { OrderWithItemsApp } from '@/types/type'
 import { useAuth } from '@clerk/clerk-expo'
 import BottomSheet, { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet'
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { Href, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { View, Text, BackHandler, Pressable, Image, ImageSourcePropType, useWindowDimensions, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -44,24 +44,6 @@ const ReasonItem = ({ label, selected, onPress, index }: {
   </Pressable>
 )
 
-const SupportButton = ({ tintColor = '#4b5563' }: { tintColor?: string }) => (
-  <View className='justify-center items-center w-full gap-y-2 mt-4'>
-    <Pressable 
-      className='bg-gray-200 rounded-full items-center justify-center' 
-      style={{ width: 50, height: 50, overflow: 'hidden' }}
-    >
-      <Image 
-        source={images.aide} 
-        style={{ width: '70%', height: '70%' }} 
-        resizeMode='contain' 
-        tintColor={tintColor} 
-      />
-    </Pressable>
-    <Text className='font-regular text-[12px] text-neutral-600'>
-      Chatter avec le support
-    </Text>
-  </View>
-)
 
 const OrderProcess = () => {
   const width = useWindowDimensions().width
@@ -77,6 +59,8 @@ const OrderProcess = () => {
   const [error, setError] = useState<string | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [isCanceling, setIsCanceling] = useState(false)
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [isCreatingChampionConv, setIsCreatingChampionConv] = useState(false);
   
   const champion = useUserStore((state) => state.user)
   const championAvatar = useUserStore((state) => state.avatar)
@@ -137,12 +121,12 @@ const OrderProcess = () => {
       await new Promise(resolve => setTimeout(resolve, 3000))
       
       router.push({
-        pathname: '/(restaurants)/pourboire' as any,
+        pathname: '/(services)/pourboire' as any,
         params: { 
           orderId: id as string,
           championId: champion?.$id,
           championName: champion?.name,
-          championAvatar: champion?.avatarId
+          championAvatar: championAvatar?.uri
         }
       })
     } catch (error) {
@@ -152,6 +136,83 @@ const OrderProcess = () => {
       setIsValidating(false)
     }
   }, [id, champion])
+
+  const handleCreateConversation = useCallback(async () => {
+  try {
+    if (!order?.userId) {
+      console.error('❌ userId manquant');
+      return;
+    }
+
+    setIsCreatingConversation(true);
+    const supportId = 'user_37iHKC9OSZDcxongNQHLfCLhxYa';
+    
+    const conversationId : string= await createConversation(order.userId, supportId);
+    console.log('✅ Conversation créée:', conversationId);
+    
+    router.push(`/SupportChat/${conversationId}` as Href);
+  } catch (error) {
+    console.error('❌ Erreur création conversation:', error);
+  } finally {
+    setIsCreatingConversation(false);
+  }
+}, [order?.userId]);
+
+const handleCreateChampionConversation = useCallback(async () => {
+  try {
+    if (!order?.userId || !order?.championId) {
+      console.error('❌ userId ou championId manquant');
+      return;
+    }
+
+    setIsCreatingChampionConv(true);
+    
+    const conversationId: string = await createConversation(
+      order.userId, 
+      order.championId
+    );
+    
+    console.log('✅ Conversation champion créée:', conversationId);
+    
+    router.push({
+      pathname: `/ChampionChat/${conversationId}`,
+      params: {
+        championName: champion?.name || 'Votre Champion',
+        championAvatar: championAvatar?.uri || '',
+      }
+    } as Href);
+  } catch (error) {
+    console.error('❌ Erreur création conversation champion:', error);
+  } finally {
+    setIsCreatingChampionConv(false);
+  }
+}, [order?.userId, order?.championId, champion?.name, championAvatar?.uri]);
+
+
+ const SupportButton = ({ tintColor = '#4b5563' }: { tintColor?: string }) => (
+  <View className='justify-center items-center w-full gap-y-2 mt-4'>
+    <Pressable 
+      className='bg-gray-200 rounded-full items-center justify-center' 
+      style={{ width: 50, height: 50, overflow: 'hidden' }}
+      onPress={handleCreateConversation}
+      disabled={isCreatingConversation}
+    >
+      {isCreatingConversation ? (
+        <ActivityIndicator size="small" color={tintColor} />
+      ) : (
+        <Image 
+          source={images.aide} 
+          style={{ width: '70%', height: '70%' }} 
+          resizeMode='contain' 
+          tintColor={tintColor} 
+        />
+      )}
+    </Pressable>
+    <Text className='font-regular text-[12px] text-neutral-600'>
+      {isCreatingConversation ? 'Connexion...' : 'Chatter avec le support'}
+    </Text>
+  </View>
+);
 
   useEffect(() => {
     if (!loading && orderStatus === 'delivering' && order?.championId && !championLoaded.current) {
@@ -329,8 +390,25 @@ const OrderProcess = () => {
         <Text className='font-poppins-bold text-[16px]'>{champion?.name || 'Champion'}</Text>
         <Text className='font-regular text-[14px] text-neutral-700 mb-3'>En route pour votre livraison</Text>
         
-        <Pressable className='rounded-full bg-primary-400 py-3 px-6'>
-          <Text className='text-white font-medium text-[16px]'>Contacter votre champion</Text>
+        <Pressable 
+          className={`rounded-full py-3 px-6 ${
+            isCreatingChampionConv ? 'bg-primary-300' : 'bg-primary-400'
+          }`}
+          onPress={handleCreateChampionConversation}
+          disabled={isCreatingChampionConv}
+        >
+          {isCreatingChampionConv ? (
+            <View className='flex-row items-center gap-x-2'>
+              <ActivityIndicator size="small" color="white" />
+              <Text className='text-white font-medium text-[16px]'>
+                Connexion...
+              </Text>
+            </View>
+          ) : (
+            <Text className='text-white font-medium text-[16px]'>
+              Contacter votre champion
+            </Text>
+          )}
         </Pressable>
 
         <SupportButton />

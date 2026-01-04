@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
 import { images } from '@/constants';
-import { router, useLocalSearchParams, useFocusEffect} from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect, Href} from 'expo-router';
 import useAppwrite from '@/lib/useAppwrite';
 import { OrderHistoryItem } from '@/types/type';
 import { getUserOrdersActive, getUserOrdersHistory } from '@/lib/appwrite';
@@ -20,7 +20,8 @@ const OrderCard = ({ order }: { order: OrderHistoryItem }) => {
   const heureOrder = getTimeFromDate(order.orderCreatedAt);
   
   const handlePress = () => {
-    router.push(`/orderProcess/${order.orderId}`);
+    console.log('🔍 Clic détecté sur commande:', order.orderId);
+    router.push(`/orderProcess/${order.orderId}` as Href);
   };
   
   const showStatusBadge = ['delivered', 'canceled', 'rejected'].includes(order.status);
@@ -28,8 +29,8 @@ const OrderCard = ({ order }: { order: OrderHistoryItem }) => {
   return (
     <Pressable
       className='flex-row gap-x-4 py-3 px-4 border-b border-gray-200 active:bg-gray-50' 
-      onPress={handlePress}
-      hitSlop={15}
+      onPressIn={handlePress}
+      delayLongPress={0}
     >
       {/* Avatar du restaurant */}
       <View className='relative'>
@@ -271,6 +272,8 @@ const Commandes = () => {
           </View>
         )}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={false}
+        scrollEnabled={true}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
