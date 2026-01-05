@@ -12,7 +12,10 @@
       "bundleIdentifier": "com.adam.gozem",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Cette application a besoin d'accéder à votre caméra pour prendre des photos.",
+        "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à vos photos.",
+        "NSLocationWhenInUseUsageDescription": "Nous avons besoin de votre localisation pour trouver les restaurants près de chez vous."
       }
     },
     "android": {
@@ -42,14 +45,6 @@
         }
       ],
       "expo-localization",
-      [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "project": "gozem_app",
-          "organization": "adam-4y"
-        }
-      ],
       [
         "expo-notifications",
         {

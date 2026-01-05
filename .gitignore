@@ -136,3 +136,8 @@ dist
 
 expo-env.d.ts
 # @end expo-cli
+
+android/keystores/release.keystore
+
+.expo/
+.expo-shared/
