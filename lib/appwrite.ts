@@ -7,14 +7,32 @@ import { formatDateRelative } from './utils';
 
 type GetTokenFn = (opt?: { skipCache?: boolean }) => Promise<string | null>;
 
+const getEnvVar = (key: string): string => {
+  let value: string | undefined;
+  
+  // En développement : utiliser process.env
+  if (__DEV__) {
+    value = (process.env as any)[key];
+  } else {
+    // En build : utiliser Constants.expoConfig.extra
+    value = Constants.expoConfig?.extra?.[key];
+  }
+  
+  if (!value) {
+    throw new Error(`Missing environment variable: ${key}`);
+  }
+  
+  return value;
+};
+
 
 const androidPkg = Constants.expoConfig?.android?.package ?? 'host.exp.exponent';
 const iosBundle = Constants.expoConfig?.ios?.bundleIdentifier ?? 'host.exp.Exponent';
 const platformId = Platform.OS === 'android' ? androidPkg : iosBundle;
 
 export const appwriteConfig = {
-    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!,
-    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!,
+    endpoint: getEnvVar('EXPO_PUBLIC_APPWRITE_ENDPOINT'),
+    projectId: getEnvVar('EXPO_PUBLIC_APPWRITE_PROJECT_ID'),
     databaseId: '68b6b82d0002ee2da596',
     bucketId: '68b807d70015bf53e8b0',
     userCollectionId: '68b80ce0001400d839ff',

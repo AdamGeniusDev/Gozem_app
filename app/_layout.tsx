@@ -17,6 +17,26 @@ import { useCartInitialization } from "@/hooks/useCartInitialization";
 import { KkiapayProvider } from '@kkiapay-org/react-native-sdk';
 import { OfflineScreen } from '@/components/OfflineScreen';
 import { useNetworkStatus } from "@/lib/useNetworkStatus";
+import Constants from 'expo-constants';
+
+// ✅ Récupération de la clé Clerk depuis les variables d'environnement
+const getClerkPublishableKey = () => {
+  // En développement : utiliser process.env
+  if (__DEV__) {
+    return process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  }
+  
+  // En build : utiliser Constants.expoConfig.extra
+  return Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+};
+
+const publishableKey = getClerkPublishableKey();
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing Clerk Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your environment variables.'
+  );
+}
 
 Sentry.init({
   dsn: 'https://2ed88e3bf6e402259453c5e5c0330312@o4509044325744640.ingest.de.sentry.io/4509982614814800',
@@ -54,7 +74,7 @@ export default Sentry.wrap(function RootLayout() {
     "ExtraBold": require("../assets/fonts/extra_bold.ttf"),
     "Medium": require("../assets/fonts/medium.otf"),
     "Regular": require("../assets/fonts/regular.otf"),
-    "SemiBold": require("../assets/fonts/semi_bold.otf"),
+    "SemiBold": require("../assets/fonts/semi_bold.ttf"),
     "RobotoMedium": require("../assets/fonts/roboto_medium_numbers.ttf"),
     "Poppins": require("../assets/fonts/poppins.ttf"),
     "PoppinsExtra": require("../assets/fonts/poppins-extra.ttf"),
@@ -93,7 +113,10 @@ export default Sentry.wrap(function RootLayout() {
 
   // ✅ Providers puis AppContent (qui gère le réseau)
   return (
-    <ClerkProvider tokenCache={tokenCache}>
+    <ClerkProvider 
+      publishableKey={publishableKey} 
+      tokenCache={tokenCache}
+    >
       <KkiapayProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaProvider>
